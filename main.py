@@ -22,7 +22,7 @@ def main():
     episodes_per_epoch = 10    # Number of episodes (trajectories) to collect per update
 
     # Initialize PPO Agent (this creates the network, optimizer, etc.)
-    agent = PPOAgent()
+    agent = PPOAgent(learned_reward=False)
 
     # Main training loop
     for epoch in range(num_epochs):

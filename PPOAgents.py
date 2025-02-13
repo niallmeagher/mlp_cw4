@@ -40,7 +40,7 @@ class RewardFunction(nn.Module):
 
 class PPOAgent:
     def __init__(self, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
-                 value_loss_coef=0.5, entropy_coef=0.01, gamma=0.99, update_epochs=4):
+                 value_loss_coef=0.5, entropy_coef=0.01, gamma=0.99, update_epochs=4, learned_reward = False):
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(
@@ -51,9 +51,14 @@ class PPOAgent:
         self.entropy_coef = entropy_coef
         self.gamma = gamma
         self.update_epochs = update_epochs
+        self.learned_reward = learned_reward
 
-        self.reward_net = RewardFunction(state_channels=input_channels, state_size=20, num_actions=num_actions).to(self.device)
-        self.reward_optimizer = optim.Adam(self.reward_net.parameters(), lr=lr)
+        if self.learned_reward == True:
+            self.reward_net = RewardFunction(state_channels=input_channels, state_size=20, num_actions=num_actions).to(self.device)
+            self.reward_optimizer = optim.Adam(self.reward_net.parameters(), lr=lr)
+        else:
+            self.reward_net = None
+        
 
     def select_action(self, state, mask=None):
         """
@@ -74,11 +79,21 @@ class PPOAgent:
         """
         Use the learnable reward function to predict a reward given a state and action.
         """
-        state = state.to(self.device)
-        action_tensor = torch.tensor(
-            [action], dtype=torch.long).to(self.device)
-        pred_reward = self.reward_net(state, action_tensor)
-        return pred_reward
+        if self.learned_reward:
+            # Use the reward network (make sure state and action are on the correct device)
+            state = state.to(self.device)
+            action_tensor = torch.tensor(
+                [action], dtype=torch.long, device=self.device)
+            pred_reward = self.reward_net(state, action_tensor)
+            return pred_reward
+        else:
+            # Define your static reward logic here.
+            # For example, assume the optimal action is 200:
+            TARGET_ACTION = 200
+            true_reward = 1 - (abs(action - TARGET_ACTION) / TARGET_ACTION)
+            true_reward = max(0.0, true_reward)
+            return torch.tensor(true_reward, dtype=torch.float32, device=self.device)
+
 
     def compute_returns(self, rewards, dones, values, next_value):
         """
@@ -150,12 +165,11 @@ class PPOAgent:
             loss.backward()
             self.optimizer.step()
         # Assume trajectories include 'true_rewards' computed from simulation.
-        if 'true_rewards' in trajectories:
-            # Detach states and actions so that the reward network update does not try to backpropagate through
-            # the graph that was used in the policy update.
-            predicted_rewards = self.reward_net(states.detach(), actions.detach())
-            reward_loss = F.mse_loss(
-                predicted_rewards.squeeze(-1), trajectories['true_rewards'].to(self.device))
+        if self.learned_reward and 'true_rewards' in trajectories:
+            predicted_rewards = self.reward_net(
+                states.detach(), actions.detach())
+            reward_loss = F.mse_loss(predicted_rewards.squeeze(-1),
+                                     trajectories['true_rewards'].to(self.device))
             self.reward_optimizer.zero_grad()
             reward_loss.backward()
             self.reward_optimizer.step()
