@@ -124,8 +124,8 @@ def run_random_cell2fire_and_analyze():
     prop_zeros = total_zeros / total
     prop_ones  = total_ones / total
     
-    print(f"Proportion of 0s: {prop_zeros:.2f}")
-    print(f"Proportion of 1s: {prop_ones:.2f}")
+   # print(f"Proportion of 0s: {prop_zeros:.2f}")
+    #print(f"Proportion of 1s: {prop_ones:.2f}")
     
     
     return prop_ones
@@ -147,7 +147,6 @@ def simulate_fire_episode(state, action):
     reward = run_random_cell2fire_and_analyze()
     #cmd_in = dir + cmd
    # os.system(cmd_in)
-    print("Success!!!!")
     return (1/reward) -1
 
 def main():
@@ -187,9 +186,8 @@ def main():
             pred_reward = agent.reward_function(state, action)
 
             # Simulate the fire episode to get a true reward.
-            #true_reward = agent.simulate_fire_episode(state, action)
-            true_reward = agent.simulate_test_episode(state, action)
-            print(true_reward)
+            true_reward = agent.simulate_fire_episode(state, action)
+            #true_reward = agent.simulate_test_episode(state, action)
             total_reward += true_reward.item()
 
             # For this one-step episode, the return is the true reward.
