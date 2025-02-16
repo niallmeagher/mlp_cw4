@@ -1,6 +1,11 @@
+import os
+cmd = "./Cell2Fire --input-instance-folder /home/s2686742/Cell2Fire/data/Sub40x40/ --output-folder ../results/Sub40x40v3 --ignitions --sim-years 1 --nsims 5 --grids 10 --final-grid --Fire-Period-Length 1.9 --weather rows --nweathers 1 --output-messages --ROS-CV 0.0 --seed 1 --IgnitionRad 2 --HFactor 1.9 --FFactor 1.0 --BFactor 1.90 --EFactor 1.9"
+os.system(cmd)
+print("Success")
+
 import torch
 import numpy as np
-import os
+
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
 
