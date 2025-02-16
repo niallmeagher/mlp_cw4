@@ -5,7 +5,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
+import numpy as np
 from ActorCriticNetworks import ActorCriticNetwork
+import subprocess
+import os
+import glob
 
 
 class RewardFunction(nn.Module):
@@ -39,12 +43,11 @@ class RewardFunction(nn.Module):
 
 
 class PPOAgent:
+
     def __init__(self, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
-                 value_loss_coef=0.5, entropy_coef=0.01, gamma=0.99, update_epochs=4, learned_reward = False):
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
-        self.network = ActorCriticNetwork(
-            input_channels, num_actions).to(self.device)
+                 value_loss_coef=0.5, entropy_coef=0.01, gamma=0.99, update_epochs=4, learned_reward=False):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.network = ActorCriticNetwork(input_channels, num_actions).to(self.device)
         self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
         self.clip_epsilon = clip_epsilon
         self.value_loss_coef = value_loss_coef
@@ -53,13 +56,108 @@ class PPOAgent:
         self.update_epochs = update_epochs
         self.learned_reward = learned_reward
 
-        if self.learned_reward == True:
+        if self.learned_reward:
             self.reward_net = RewardFunction(state_channels=input_channels, state_size=20, num_actions=num_actions).to(self.device)
             self.reward_optimizer = optim.Adam(self.reward_net.parameters(), lr=lr)
         else:
             self.reward_net = None
-        
 
+    def run_random_cell2fire_and_analyze(self):
+        # Define the input and output directories (adjust as needed)
+        input_folder = "/home/s2686742/Cell2Fire/data/Sub40x40/"
+        output_folder = "/home/s2686742/Cell2Fire/results/Sub40x40v3"
+
+        # Randomly assign values to numeric parameters using numpy.random:
+        sim_years = int(np.random.randint(1, 6))             # 1 to 5 years
+        nsims = int(np.random.randint(1, 11))                  # 1 to 10 simulations
+        grids = int(np.random.randint(5, 21))                  # 5 to 20 grids
+        fire_period_len = np.round(np.random.uniform(0.5, 3.0), 2)  # float between 0.5 and 3.0
+        nweathers = int(np.random.randint(1, 6))               # 1 to 5 weather files
+        ros_cv = np.round(np.random.uniform(0.0, 1.0), 2)      # float between 0 and 1
+        seed = int(np.random.randint(1, 1001))                 # seed between 1 and 1000
+        ignition_rad = int(np.random.randint(1, 6))            # ignition radius between 1 and 5
+        hfactor = np.round(np.random.uniform(0.5, 2.0), 2)
+        ffactor = np.round(np.random.uniform(0.5, 2.0), 2)
+        bfactor = np.round(np.random.uniform(0.5, 2.0), 2)
+        efactor = np.round(np.random.uniform(0.5, 2.0), 2)
+
+        # Construct the command as a list (to avoid shell quoting issues)
+        cmd = [
+            "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/./Cell2Fire",
+            "--input-instance-folder", input_folder,
+            "--output-folder", output_folder,
+            "--ignitions",
+            "--sim-years", str(1),
+            "--nsims", str(20),
+            "--grids", str(10),
+            "--final-grid",
+            "--Fire-Period-Length", str(fire_period_len),
+            "--weather", "rows",
+            "--nweathers", str(nweathers),
+            "--output-messages",
+            "--ROS-CV", str(0.0),
+            "--seed", str(1),
+            "--IgnitionRad", str(ignition_rad),
+            "--HFactor", str(hfactor),
+            "--FFactor", str(ffactor),
+            "--BFactor", str(bfactor),
+            "--EFactor", str(efactor)
+        ]
+
+        print("Executing command:")
+        print(" ".join(cmd))
+
+        # Run the command and wait for completion
+        try:
+            subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            print("Error running Cell2Fire:", e)
+            return None
+
+        csv_file = "/home/s2686742/Cell2Fire/cell2fire/results/Sub40x40v3/Grids/Grids5/ForestGrid07.csv"
+
+        if not os.path.exists(csv_file):
+            print(f"CSV file not found: {csv_file}")
+            return None
+
+        # Load the CSV file using NumPy (assumes comma-delimited with no header)
+        try:
+            data = np.loadtxt(csv_file, delimiter=',')
+        except Exception as e:
+            print(f"Error reading {csv_file}: {e}")
+            return None
+
+        # Flatten the data (in case it's 2D) and count 0s and 1s
+        flat_data = np.array(data).flatten()
+        total_zeros = np.sum(flat_data == 0)
+        total_ones = np.sum(flat_data == 1)
+
+        total = total_zeros + total_ones
+        if total == 0:
+            print("No 0s or 1s found in the CSV file!")
+            return None
+
+        prop_zeros = total_zeros / total
+        prop_ones = total_ones / total
+
+        return prop_ones
+
+    def simulate_fire_episode(self, state, action):
+        """
+        Dummy simulation of fires on the grid given the current state and the action
+        (firebreak placements). In an actual implementation, this function would:
+          1. Modify the grid state based on the action (placing firebreaks).
+          2. Simulate a set of fires at random grid locations.
+          3. Evaluate how effective the firebreaks were (e.g., the damage avoided).
+          4. Return an average reward for the episode.
+
+        For this framework example, we simply return a dummy reward.
+        """
+        reward = self.run_random_cell2fire_and_analyze()
+        return (1 / reward) - 1
+
+
+    
     def select_action(self, state, mask=None):
         """
         Given a state (and an optional mask of valid actions), return:
@@ -96,13 +194,7 @@ class PPOAgent:
 
 
     def compute_returns(self, rewards, dones, values, next_value):
-        """
-        Compute discounted returns.
-          - rewards: list of rewards for the trajectory.
-          - dones: list of booleans indicating episode termination.
-          - values: list of value estimates.
-          - next_value: value estimate for the state following the last state.
-        """
+        
         returns = []
         R = next_value
         # Iterate in reverse (from last step to first)
@@ -116,16 +208,7 @@ class PPOAgent:
         return returns
 
     def update(self, trajectories):
-        """
-        Update the policy using PPO.
-        Expects a dictionary `trajectories` with:
-          'states': tensor of shape (batch, 1, 20, 20)
-          'actions': tensor of shape (batch,) of chosen action indices
-          'log_probs': tensor of shape (batch,) of log probabilities (from old policy)
-          'returns': tensor of shape (batch,) computed discounted returns
-          'values': tensor of shape (batch, 1) of value estimates (from old policy)
-          Optionally, 'masks': tensor of shape (batch, num_actions) for action masking.
-        """
+       
         states = trajectories['states'].to(self.device)
         actions = trajectories['actions'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
@@ -172,24 +255,17 @@ class PPOAgent:
                                      trajectories['true_rewards'].to(self.device))
             self.reward_optimizer.zero_grad()
             reward_loss.backward()
-            self.reward_optimizer.step()
-           
-          
+            self.reward_optimizer.step()   
     def simulate_test_episode(self, state, action):
-        """
-        A test simulation function.
-        In this test, we assume that the optimal action is to choose index 200.
-        We define the true reward as higher when the chosen action is near 200.
-        For example, we compute:
-              true_reward = 1 - (abs(action - 200) / 200)
-        so that an action of 200 yields a reward of 1, and an action of 0 or 400 yields 0.
-        """
+       
         TARGET_ACTION = 200
         # Compute a reward that is 1 at the target and decays linearly.
         true_reward = 1 - (abs(action - TARGET_ACTION) / TARGET_ACTION)
         # Clip reward to be at least 0.
         true_reward = max(0.0, true_reward)
         return torch.tensor(true_reward, dtype=torch.float32)
+       
+
 '''
     def reward_function(self, state, action, next_state):
         """
