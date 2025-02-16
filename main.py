@@ -130,10 +130,6 @@ def run_random_cell2fire_and_analyze():
     
     return prop_ones
 
-# Example usage:
-if __name__ == "__main__":
-    run_random_cell2fire_and_analyze()
-
 
 def simulate_fire_episode(state, action):
     """
@@ -193,6 +189,7 @@ def main():
             # Simulate the fire episode to get a true reward.
             #true_reward = agent.simulate_fire_episode(state, action)
             true_reward = agent.simulate_test_episode(state, action)
+            print(true_reward)
             total_reward += true_reward.item()
 
             # For this one-step episode, the return is the true reward.
