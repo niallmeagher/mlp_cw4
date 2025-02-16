@@ -98,7 +98,7 @@ def run_random_cell2fire_and_analyze():
     print(f"Proportion of 0s: {prop_zeros:.2f}")
     print(f"Proportion of 1s: {prop_ones:.2f}")
     '''
-    csv_file = "/home/s2686742/Cell2Fire/cell2fire/results/Sub40x40v3/Grids/Grid5/ForestGrid07.csv"
+    csv_file = "/home/s2686742/Cell2Fire/cell2fire/results/Sub40x40v3/Grids/Grids5/ForestGrid07.csv"
     
     if not os.path.exists(csv_file):
         print(f"CSV file not found: {csv_file}")
