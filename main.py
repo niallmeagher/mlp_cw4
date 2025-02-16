@@ -63,7 +63,7 @@ def run_random_cell2fire_and_analyze():
     except subprocess.CalledProcessError as e:
         print("Error running Cell2Fire:", e)
         return None
-    
+    '''
     # After execution, locate CSV files in the output folder.
     csv_files = glob.glob(os.path.join(output_folder, "*.csv"))
     if not csv_files:
@@ -97,6 +97,36 @@ def run_random_cell2fire_and_analyze():
     
     print(f"Proportion of 0s: {prop_zeros:.2f}")
     print(f"Proportion of 1s: {prop_ones:.2f}")
+    '''
+    csv_file = "/home/s2686742/Cell2Fire/cell2fire/results/Sub40x40v3/Grids/Grid5/ForestGrid07.csv"
+    
+    if not os.path.exists(csv_file):
+        print(f"CSV file not found: {csv_file}")
+        return None
+    
+    # Load the CSV file using NumPy (assumes comma-delimited with no header)
+    try:
+        data = np.loadtxt(csv_file, delimiter=',')
+    except Exception as e:
+        print(f"Error reading {csv_file}: {e}")
+        return None
+    
+    # Flatten the data (in case it's 2D) and count 0s and 1s
+    flat_data = np.array(data).flatten()
+    total_zeros = np.sum(flat_data == 0)
+    total_ones  = np.sum(flat_data == 1)
+    
+    total = total_zeros + total_ones
+    if total == 0:
+        print("No 0s or 1s found in the CSV file!")
+        return None
+    
+    prop_zeros = total_zeros / total
+    prop_ones  = total_ones / total
+    
+    print(f"Proportion of 0s: {prop_zeros:.2f}")
+    print(f"Proportion of 1s: {prop_ones:.2f}")
+    
     
     return prop_ones
 
@@ -122,7 +152,7 @@ def simulate_fire_episode(state, action):
     #cmd_in = dir + cmd
    # os.system(cmd_in)
     print("Success!!!!")
-    return reward
+    return (1/reward) -1
 
 def main():
     # Hyperparameters
