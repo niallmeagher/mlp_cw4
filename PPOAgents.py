@@ -64,8 +64,8 @@ class PPOAgent:
 
     def run_random_cell2fire_and_analyze(self):
         # Define the input and output directories (adjust as needed)
-        input_folder = "/home/s2686742/Cell2Fire/data/Sub40x40/"
-        output_folder = "/home/s2686742/Cell2Fire/results/Sub40x40v3"
+        input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
+        output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v1"
 
         # Randomly assign values to numeric parameters using numpy.random:
         sim_years = int(np.random.randint(1, 6))             # 1 to 5 years
@@ -114,7 +114,7 @@ class PPOAgent:
             print("Error running Cell2Fire:", e)
             return None
 
-        csv_file = "/home/s2686742/Cell2Fire/cell2fire/results/Sub40x40v3/Grids/Grids5/ForestGrid07.csv"
+        csv_file = "/home/s2686742/Cell2Fire/cell2fire/results/Sub20x20v1/Grids/Grids5/ForestGrid07.csv"
 
         if not os.path.exists(csv_file):
             print(f"CSV file not found: {csv_file}")
@@ -153,7 +153,10 @@ class PPOAgent:
 
         For this framework example, we simply return a dummy reward.
         """
-        reward = self.run_random_cell2fire_and_analyze()
+        action = action.view(20,20)
+        mask = action > .5
+        state[:,:, mask] = 101
+        reward = self.run_random_cell2fire_and_analyze(state)
         return (1 / reward) - 1
 
 
@@ -171,6 +174,7 @@ class PPOAgent:
         dist, value = self.network(state, mask)
         action = dist.sample()
         log_prob = dist.log_prob(action)
+        
         return action.item(), log_prob, value
 
     def reward_function(self, state, action):

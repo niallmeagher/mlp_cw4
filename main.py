@@ -12,6 +12,34 @@ import numpy as np
 import glob
 import os
 
+def read_asc_to_tensor(file_path, header_lines=6):
+    # Read the file, skipping the header lines
+    with open(file_path, 'r') as f:
+        # Skip header lines
+        for _ in range(header_lines):
+            next(f)
+        
+        # Read the remaining lines and extract the grid (assuming it's a 20x20 grid of floats)
+        grid = []
+        for line in f:
+            # Split the line into individual values and convert to float
+            grid.append(list(map(float, line.split())))
+
+    # Convert the grid into a numpy array
+    grid_np = np.array(grid)
+
+    # Ensure the grid is of shape (20, 20)
+    if grid_np.shape != (20, 20):
+        raise ValueError(f"Expected grid size of (20, 20), but got {grid_np.shape}")
+
+    # Convert the numpy array to a PyTorch tensor and add the extra dimensions (1, 1)
+    tensor = torch.tensor(grid_np).unsqueeze(0).unsqueeze(0)
+
+    return tensor
+
+# Example usage
+file_path = 'your_file.asc'  # Replace with your actual file path
+tensor = read_asc_to_tensor(file_path)
 
 def main():
     # Hyperparameters
@@ -20,7 +48,8 @@ def main():
 
     # Initialize PPO Agent (this creates the network, optimizer, etc.)
     agent = PPOAgent(learned_reward=False)
-   
+    csv_forest = "/home/s2686742/Cell2Fire/data/Sub20x20/Forest.asc"
+    tensor_forest = read_asc_to_tensor(csv_forest)
     # Main training loop
     for epoch in range(num_epochs):
         # Containers for storing trajectories (each episode is assumed to be one step for simplicity)
@@ -38,7 +67,7 @@ def main():
 
         for episode in range(episodes_per_epoch):
             # Environment reset: a dummy 20x20 grid state.
-            state = torch.zeros(1, 1, 20, 20)  # For example, an empty grid.
+            state = tensor_forest  # For example, an empty grid.
             # Assume all actions are valid.
             valid_actions_mask = torch.ones(1, 400)
 
