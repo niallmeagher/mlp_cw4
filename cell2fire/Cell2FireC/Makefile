@@ -1,4 +1,4 @@
-EIGENDIR     = /usr/include/eigen3/
+EIGENDIR     = /home/s2686742/.conda/envs/cell2fire/include/eigen3/
 # EIGENDIR     = /usr/local/include/eigen3/ # For Mac only.
 CC = g++
 MPCC = g++

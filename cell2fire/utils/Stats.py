@@ -605,11 +605,11 @@ class Statistics(object):
                 plt.colorbar(sm, cax=cax1)
                 
             plt.savefig(os.path.join(self._StatsFolder, "SpreadTree_FreqGraph_" + outname + ".png"), 
-                        dpi=200, figsize=(200, 200), 
+                        dpi=200, 
                         bbox_inches='tight', transparent=False)
             if self._pdfOutputs:
                 plt.savefig(os.path.join(self._StatsFolder, "SpreadTree_FreqGraph_" + outname + ".pdf"), 
-                            dpi=200, figsize=(200, 200), 
+                            dpi=200, 
                             bbox_inches='tight', transparent=False)
             plt.close("all")
 
@@ -683,12 +683,12 @@ class Statistics(object):
                 os.makedirs(PlotPath)
             
             plt.savefig(os.path.join(PlotPath, "PropagationTree" + str(nSim) +".png"), 
-                        dpi=200, figsize=(200, 200), edgecolor='b', 
+                        dpi=200, edgecolor='b', 
                         bbox_inches='tight', transparent=False)
             
             if self._pdfOutputs:
                 plt.savefig(os.path.join(PlotPath, "PropagationTree" + str(nSim) +".pdf"), 
-                            dpi=200, figsize=(200, 200), edgecolor='b', 
+                            dpi=200, edgecolor='b', 
                             bbox_inches='tight', transparent=False)
             
 
@@ -825,12 +825,12 @@ class Statistics(object):
             cax1 = divider.append_axes("right", size="5%", pad=0.05)
             plt.colorbar(sm, cax=cax1) 
             plt.savefig(os.path.join(PlotPath, "FireSpreadTree" + str(nSim) + "_" + str(version) + ".png"),
-                        dpi=200,  figsize=(200, 200), 
+                        dpi=200, 
                         bbox_inches='tight', transparent=False)
             
             if self._pdfOutputs:
                 plt.savefig(os.path.join(PlotPath, "FireSpreadTree" + str(nSim) + "_" + str(version) + ".pdf"),
-                            dpi=200,  figsize=(200, 200), 
+                            dpi=200, 
                             bbox_inches='tight', transparent=False)
             plt.close("all")
         
@@ -1201,11 +1201,11 @@ class Statistics(object):
                 print("Hourly Stats:\n",Ah)
 
             # Hourly Summary
-            SummaryDF = Ah[["NonBurned", "Burned", "Harvested", "Hour"]].groupby('Hour')["NonBurned", "Burned", "Harvested"].mean()
+            SummaryDF = Ah[["NonBurned", "Burned", "Harvested", "Hour"]].groupby('Hour')[["NonBurned", "Burned", "Harvested"]].mean()
             SummaryDF.rename(columns={"NonBurned":"AVGNonBurned", "Burned":"AVGBurned", "Harvested":"AVGHarvested"}, inplace=True)
-            SummaryDF[["STDBurned", "STDHarvested"]] = Ah[["NonBurned", "Burned", "Harvested", "Hour"]].groupby('Hour')["Burned","Harvested"].std()[["Burned","Harvested"]]
-            SummaryDF[["MaxNonBurned", "MaxBurned"]] = Ah[["NonBurned", "Burned", "Harvested", "Hour"]].groupby('Hour')["NonBurned", "Burned"].max()[["NonBurned", "Burned"]]
-            SummaryDF[["MinNonBurned", "MinBurned"]] = Ah[["NonBurned", "Burned", "Harvested", "Hour"]].groupby('Hour')["NonBurned", "Burned"].min()[["NonBurned", "Burned"]]
+            SummaryDF[["STDBurned", "STDHarvested"]] = Ah[["NonBurned", "Burned", "Harvested", "Hour"]].groupby('Hour')[["Burned","Harvested"]].std()[["Burned","Harvested"]]
+            SummaryDF[["MaxNonBurned", "MaxBurned"]] = Ah[["NonBurned", "Burned", "Harvested", "Hour"]].groupby('Hour')[["NonBurned", "Burned"]].max()[["NonBurned", "Burned"]]
+            SummaryDF[["MinNonBurned", "MinBurned"]] = Ah[["NonBurned", "Burned", "Harvested", "Hour"]].groupby('Hour')[["NonBurned", "Burned"]].min()[["NonBurned", "Burned"]]
             Aux = (SummaryDF["AVGNonBurned"] + SummaryDF["AVGBurned"] + SummaryDF["AVGHarvested"])
             SummaryDF["%AVGNonBurned"], SummaryDF["%AVGBurned"], SummaryDF["%AVGHarvested"] = SummaryDF["AVGNonBurned"] / Aux, SummaryDF["AVGBurned"] / Aux, SummaryDF["AVGHarvested"] / Aux
             SummaryDF.reset_index(inplace=True)
