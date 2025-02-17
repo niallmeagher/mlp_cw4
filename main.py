@@ -38,8 +38,8 @@ def read_asc_to_tensor(file_path, header_lines=6):
     return tensor
 
 # Example usage
-file_path = 'your_file.asc'  # Replace with your actual file path
-tensor = read_asc_to_tensor(file_path)
+  # Replace with your actual file path
+
 
 def main():
     # Hyperparameters
