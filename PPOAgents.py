@@ -168,8 +168,7 @@ class PPOAgent:
             print("Error running Cell2Fire:", e)
             return None
 
-        csv_file = "/home/s2686742/Cell2Fire/cell2fire/results/Sub20x20v1/Grids/Grids5/ForestGrid07.csv"
-
+        csv_file = "/home/s2686742/Cell2Fire/results/Sub20x20v1/Grids/Grids6/ForestGrid08.csv"
         if not os.path.exists(csv_file):
             print(f"CSV file not found: {csv_file}")
             return None
