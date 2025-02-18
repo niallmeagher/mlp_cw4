@@ -66,9 +66,9 @@ def main():
     
     files = [
         "/home/s2686742/Cell2Fire/data/Sub20x20/Forest.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/Elevation.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/Saz.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/Slope.asc"
+        "/home/s2686742/Cell2Fire/data/Sub20x20/elevation.asc",
+        "/home/s2686742/Cell2Fire/data/Sub20x20/saz.asc",
+        "/home/s2686742/Cell2Fire/data/Sub20x20/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
     # Main training loop
