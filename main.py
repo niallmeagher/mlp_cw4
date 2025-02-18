@@ -72,6 +72,9 @@ def main():
     ]
     tensor_input = read_multi_channel_asc(files)
     # Main training loop
+    mask = tensor_input[:,0,:,:] != 101
+    mask = mask.squeeze()
+    print(mask)
     for epoch in range(num_epochs):
         # Containers for storing trajectories (each episode is assumed to be one step for simplicity)
         trajectories = {
