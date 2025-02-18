@@ -81,7 +81,7 @@ def main():
             # Simulate the fire episode to get a true reward.
             true_reward = agent.simulate_fire_episode(state, real_action)
             #true_reward = agent.simulate_test_episode(state, action)
-            total_reward += true_reward.item()
+            total_reward += true_reward
 
             # For this one-step episode, the return is the true reward.
             trajectories['states'].append(state)
