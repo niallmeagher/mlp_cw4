@@ -106,8 +106,7 @@ def main():
 
             # For this one-step episode, the return is the true reward.
             trajectories['states'].append(state)
-            trajectories['actions'].append(
-                torch.tensor(action, dtype=torch.long))
+            trajectories['actions'].append(real_action)
             trajectories['log_probs'].append(log_prob)
             trajectories['values'].append(value)
             trajectories['returns'].append(
