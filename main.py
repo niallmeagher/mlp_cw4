@@ -44,7 +44,7 @@ def read_asc_to_tensor(file_path, header_lines=6):
 def main():
     # Hyperparameters
     num_epochs = 1000          # Number of PPO update cycles
-    episodes_per_epoch = 10    # Number of episodes (trajectories) to collect per update
+    episodes_per_epoch = 3    # Number of episodes (trajectories) to collect per update
 
     # Initialize PPO Agent (this creates the network, optimizer, etc.)
     agent = PPOAgent(learned_reward=False)

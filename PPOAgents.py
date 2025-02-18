@@ -77,8 +77,7 @@ class PPOAgent:
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
-        else:
-            print(f"Folder {new_folder} already exists. Using existing folder.")
+        
 
         # Update the Forest.asc file in the new folder
         asc_file = os.path.join(new_folder, "Forest.asc")
@@ -119,7 +118,7 @@ class PPOAgent:
         try:
             with open(asc_file, 'w') as f:
                 f.writelines(new_file_content)
-            print(f"Updated grid in {asc_file}.")
+           # print(f"Updated grid in {asc_file}.")
         except Exception as e:
             print(f"Error writing to {asc_file}: {e}")
             return None
@@ -161,8 +160,6 @@ class PPOAgent:
             "--EFactor", str(efactor)
         ]
 
-        print("Executing command:")
-        print(" ".join(cmd))
 
         # Run the command and wait for completion
         try:
@@ -213,6 +210,7 @@ class PPOAgent:
         
         mask = action > .005
         state[:,:, mask] = 101
+        print(state)
         reward = self.run_random_cell2fire_and_analyze(state)
         return (1 / reward) - 1
 
