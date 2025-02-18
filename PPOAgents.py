@@ -207,9 +207,16 @@ class PPOAgent:
 
         For this framework example, we simply return a dummy reward.
         """
-        
+        """
         mask = action > .005
         state[:,:, mask] = 101
+        """
+        topk_values, topk_indices = torch.topk(action.flatten(), k=20)
+
+
+        rows = topk_indices // action.size(1)
+        cols = topk_indices % action.size(1)
+        state[:,:,rows,cols] = 101
         print(state)
         reward = self.run_random_cell2fire_and_analyze(state)
         return (1 / reward) - 1
