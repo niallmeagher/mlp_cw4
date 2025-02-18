@@ -100,8 +100,8 @@ class PPOAgent:
         # Ensure the state is a NumPy array with shape (20, 20)
         if hasattr(state, 'detach'):  # if it's a torch tensor
             state = state.detach().cpu().numpy()
-        else:
-            state = np.array(state)
+        state = state.squeeze()
+        state = np.array(state)
 
         if state.shape != (20, 20):
             print(f"State has shape {state.shape} but expected (20, 20).")
