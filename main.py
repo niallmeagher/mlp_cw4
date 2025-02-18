@@ -66,9 +66,9 @@ def main():
     
     files = [
         "/home/s2686742/Cell2Fire/data/Sub20x20/Forest.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/elevation.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/saz.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/slope.asc"
+        "/home/s2686742/Cell2Fire/data/Sub20x20/Elevation.asc",
+        "/home/s2686742/Cell2Fire/data/Sub20x20/Saz.asc",
+        "/home/s2686742/Cell2Fire/data/Sub20x20/Slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
     # Main training loop
@@ -106,7 +106,8 @@ def main():
 
             # For this one-step episode, the return is the true reward.
             trajectories['states'].append(state)
-            trajectories['actions'].append(real_action)
+            trajectories['actions'].append(
+                torch.tensor(action, dtype=torch.long))
             trajectories['log_probs'].append(log_prob)
             trajectories['values'].append(value)
             trajectories['returns'].append(
