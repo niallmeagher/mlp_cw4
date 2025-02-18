@@ -33,6 +33,7 @@ class ActorCriticNetwork(nn.Module):
 
     def forward(self, x, mask=None):
         # Shared CNN forward pass
+        x = x.float()
         x = self.conv1(x)
         x = self.pool(x)
         x = self.dropout(x)

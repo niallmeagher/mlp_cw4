@@ -62,7 +62,7 @@ class PPOAgent:
         else:
             self.reward_net = None
 
-    def run_random_cell2fire_and_analyze(self):
+    def run_random_cell2fire_and_analyze(self, state):
         # Define the input and output directories (adjust as needed)
         input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
         output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v1"
@@ -153,8 +153,8 @@ class PPOAgent:
 
         For this framework example, we simply return a dummy reward.
         """
-        action = action.view(20,20)
-        mask = action > .5
+        
+        mask = action > .005
         state[:,:, mask] = 101
         reward = self.run_random_cell2fire_and_analyze(state)
         return (1 / reward) - 1
@@ -172,10 +172,12 @@ class PPOAgent:
         if mask is not None:
             mask = mask.to(self.device)
         dist, value = self.network(state, mask)
+        probs = F.softmax(dist.logits, dim=-1)
+        probs = probs.reshape(20, 20)
         action = dist.sample()
         log_prob = dist.log_prob(action)
-        
-        return action.item(), log_prob, value
+       
+        return action.item(), log_prob, value, probs
 
     def reward_function(self, state, action):
         """
