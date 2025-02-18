@@ -43,13 +43,13 @@ class RewardFunction(nn.Module):
         return reward
 
 
-class PPOAgent:
 
+class PPOAgent:
     def __init__(self, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
                  value_loss_coef=0.5, entropy_coef=0.01, gamma=0.99, update_epochs=4, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions).to(self.device)
-        self.optimizer = optim.Adam(self.network.parameters(), lr=lr)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
         self.clip_epsilon = clip_epsilon
         self.value_loss_coef = value_loss_coef
         self.entropy_coef = entropy_coef
@@ -59,166 +59,76 @@ class PPOAgent:
 
         if self.learned_reward:
             self.reward_net = RewardFunction(state_channels=input_channels, state_size=20, num_actions=num_actions).to(self.device)
-            self.reward_optimizer = optim.Adam(self.reward_net.parameters(), lr=lr)
+            self.reward_optimizer = torch.optim.Adam(self.reward_net.parameters(), lr=lr)
         else:
             self.reward_net = None
 
-    def run_random_cell2fire_and_analyze(self, state):
-        # Define folder paths
-        input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
-        new_folder = "/home/s2686742/Cell2Fire/data/Sub20x20_Test/"
-        output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v1"
-
-        # Copy the input folder to new_folder if it doesn't exist already
-        if not os.path.exists(new_folder):
-            try:
-                shutil.copytree(input_folder, new_folder)
-                print(f"Copied {input_folder} to {new_folder}.")
-            except Exception as e:
-                print(f"Error copying folder: {e}")
-                return None
-        
-
-        # Update the Forest.asc file in the new folder
-        asc_file = os.path.join(new_folder, "Forest.asc")
-        try:
-            with open(asc_file, 'r') as f:
-                lines = f.readlines()
-        except Exception as e:
-            print(f"Error reading {asc_file}: {e}")
-            return None
-
-        # Define the number of header lines (adjust as needed)
-        num_header_lines = 6
-        if len(lines) < num_header_lines:
-            print("Unexpected file format: not enough header lines.")
-            return None
-
-        header_lines = lines[:num_header_lines]
-
-        # Ensure the state is a NumPy array with shape (20, 20)
-        if hasattr(state, 'detach'):  # if it's a torch tensor
-            state = state.detach().cpu().numpy()
-        state = state.squeeze()
-        state = np.array(state)
-
-        if state.shape != (20, 20):
-            print(f"State has shape {state.shape} but expected (20, 20).")
-            return None
-
-        # Build the new grid lines from the state
-        grid_lines = []
-        for row in state:
-            # Convert each number to a string; adjust formatting if needed
-            row_str = " ".join(str(val) for val in row)
-            grid_lines.append(row_str + "\n")
-
-        # Write the header and new grid back to Forest.asc
-        new_file_content = header_lines + grid_lines
-        try:
-            with open(asc_file, 'w') as f:
-                f.writelines(new_file_content)
-           # print(f"Updated grid in {asc_file}.")
-        except Exception as e:
-            print(f"Error writing to {asc_file}: {e}")
-            return None
-
-        # Randomly assign values to numeric parameters using numpy.random:
-        sim_years = int(np.random.randint(1, 6))             # 1 to 5 years
-        nsims = int(np.random.randint(1, 11))                  # 1 to 10 simulations
-        grids = int(np.random.randint(5, 21))                  # 5 to 20 grids
-        fire_period_len = np.round(np.random.uniform(0.5, 3.0), 2)  # float between 0.5 and 3.0
-        nweathers = int(np.random.randint(1, 6))               # 1 to 5 weather files
-        ros_cv = np.round(np.random.uniform(0.0, 1.0), 2)      # float between 0 and 1
-        seed = int(np.random.randint(1, 1001))                 # seed between 1 and 1000
-        ignition_rad = int(np.random.randint(1, 6))            # ignition radius between 1 and 5
-        hfactor = np.round(np.random.uniform(0.5, 2.0), 2)
-        ffactor = np.round(np.random.uniform(0.5, 2.0), 2)
-        bfactor = np.round(np.random.uniform(0.5, 2.0), 2)
-        efactor = np.round(np.random.uniform(0.5, 2.0), 2)
-
-        # Construct the command as a list (to avoid shell quoting issues)
-        cmd = [
-            "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/./Cell2Fire",
-            "--input-instance-folder", new_folder,
-            "--output-folder", output_folder,
-            "--ignitions",
-            "--sim-years", str(sim_years),
-            "--nsims", str(nsims),
-            "--grids", str(grids),
-            "--final-grid",
-            "--Fire-Period-Length", str(fire_period_len),
-            "--weather", "rows",
-            "--nweathers", str(nweathers),
-            "--output-messages",
-            "--ROS-CV", str(ros_cv),
-            "--seed", str(seed),
-            "--IgnitionRad", str(ignition_rad),
-            "--HFactor", str(hfactor),
-            "--FFactor", str(ffactor),
-            "--BFactor", str(bfactor),
-            "--EFactor", str(efactor)
-        ]
-
-
-        # Run the command and wait for completion
-        try:
-            subprocess.run(cmd, check=True)
-        except subprocess.CalledProcessError as e:
-            print("Error running Cell2Fire:", e)
-            return None
-
+    def run_random_cell2fire_and_analyze(self, state, topk_indices):
+        """
+        Run the Cell2Fire simulation, read the output CSV file, and apply penalties if 
+        selected indices (topk_indices) are not fully surrounded by 1s.
+        """
         csv_file = "/home/s2686742/Cell2Fire/results/Sub20x20v1/Grids/Grids6/ForestGrid08.csv"
+
         if not os.path.exists(csv_file):
             print(f"CSV file not found: {csv_file}")
             return None
 
-        # Load the CSV file using NumPy (assumes comma-delimited with no header)
+        # Load the CSV file using NumPy
         try:
             data = np.loadtxt(csv_file, delimiter=',')
         except Exception as e:
             print(f"Error reading {csv_file}: {e}")
             return None
 
-        # Flatten the data (in case it's 2D) and count 0s and 1s
-        flat_data = np.array(data).flatten()
-        total_zeros = np.sum(flat_data == 0)
-        total_ones = np.sum(flat_data == 1)
+        # Apply penalty if a selected index is not surrounded by 1s
+        penalty_value = -10  # Adjust penalty as needed
+        rows, cols = data.shape
+
+        for index in topk_indices:
+            r, c = index // cols, index % cols  # Convert 1D index to 2D row/col
+
+            # Get 8-neighbor values (handle edge cases)
+            neighbors = data[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
+
+            # Check if all surrounding cells (excluding center) are 1
+            if not np.all(neighbors == 1):
+                data[r, c] += penalty_value  # Apply penalty
+
+        # Save the modified grid (optional)
+        np.savetxt(csv_file, data, delimiter=",", fmt="%d")
+
+        # Compute the final proportion of 1s in the modified grid
+        total_zeros = np.sum(data == 0)
+        total_ones = np.sum(data == 1)
 
         total = total_zeros + total_ones
         if total == 0:
             print("No 0s or 1s found in the CSV file!")
             return None
 
-        prop_zeros = total_zeros / total
         prop_ones = total_ones / total
-
         return prop_ones
 
     def simulate_fire_episode(self, state, action):
         """
-        Dummy simulation of fires on the grid given the current state and the action
-        (firebreak placements). In an actual implementation, this function would:
-          1. Modify the grid state based on the action (placing firebreaks).
-          2. Simulate a set of fires at random grid locations.
-          3. Evaluate how effective the firebreaks were (e.g., the damage avoided).
-          4. Return an average reward for the episode.
-
-        For this framework example, we simply return a dummy reward.
+        Selects the top 20 values in 'action' and modifies 'state' accordingly.
         """
-        """
-        mask = action > .005
-        state[:,:, mask] = 101
-        """
+        # Get the top 20 highest action values and their indices
         topk_values, topk_indices = torch.topk(action.flatten(), k=20)
 
-
+        # Convert flat indices to 2D coordinates
         rows = topk_indices // action.size(1)
         cols = topk_indices % action.size(1)
-        state[:,:,rows,cols] = 101
-        print(state)
-        reward = self.run_random_cell2fire_and_analyze(state)
-        return (1 / reward) - 1
+
+        # Update state based on the selected indices
+        state[:, :, rows, cols] = 101
+
+        # Run Cell2Fire simulation and analyze the results
+        reward = self.run_random_cell2fire_and_analyze(state, topk_indices)
+
+        # Compute final reward
+        return (1 / reward) - 1 if reward is not None else -1
 
 
     
