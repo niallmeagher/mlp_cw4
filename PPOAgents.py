@@ -64,51 +64,108 @@ class PPOAgent:
             self.reward_net = None
 
     def run_random_cell2fire_and_analyze(self, state, topk_indices):
-        """
-        Run the Cell2Fire simulation, read the output CSV file, and apply penalties if 
-        selected indices (topk_indices) are not fully surrounded by 1s.
-        """
-        csv_file = "/home/s2686742/Cell2Fire/results/Sub20x20v1/Grids/Grids6/ForestGrid08.csv"
+        input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
+        new_folder = "/home/s2686742/Cell2Fire/data/Sub20x20_Test/"
+        output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v1"
 
-        if not os.path.exists(csv_file):
-            print(f"CSV file not found: {csv_file}")
+        if not os.path.exists(new_folder):
+            try:
+                shutil.copytree(input_folder, new_folder)
+            except Exception as e:
+                print(f"Error copying folder: {e}")
+                return None
+        
+        asc_file = os.path.join(new_folder, "Forest.asc")
+        try:
+            with open(asc_file, 'r') as f:
+                lines = f.readlines()
+        except Exception as e:
+            print(f"Error reading {asc_file}: {e}")
             return None
 
-        # Load the CSV file using NumPy
+        num_header_lines = 6
+        if len(lines) < num_header_lines:
+            return None
+
+        header_lines = lines[:num_header_lines]
+
+        if hasattr(state, 'detach'):
+            state = state.detach().cpu().numpy()
+        state = state.squeeze()
+        state = np.array(state)
+
+        if state.shape != (20, 20):
+            return None
+
+        grid_lines = [" ".join(str(val) for val in row) + "\n" for row in state]
+        new_file_content = header_lines + grid_lines
+
+        try:
+            with open(asc_file, 'w') as f:
+                f.writelines(new_file_content)
+        except Exception as e:
+            return None
+
+        try:
+            cmd = [
+                "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/./Cell2Fire",
+                "--input-instance-folder", new_folder,
+                "--output-folder", output_folder,
+                "--ignitions",
+                "--sim-years", str(np.random.randint(1, 6)),
+                "--nsims", str(np.random.randint(1, 11)),
+                "--grids", str(np.random.randint(5, 21)),
+                "--final-grid",
+                "--Fire-Period-Length", str(np.round(np.random.uniform(0.5, 3.0), 2)),
+                "--weather", "rows",
+                "--nweathers", str(np.random.randint(1, 6)),
+                "--output-messages",
+                "--ROS-CV", str(np.round(np.random.uniform(0.0, 1.0), 2)),
+                "--seed", str(np.random.randint(1, 1001)),
+                "--IgnitionRad", str(np.random.randint(1, 6)),
+                "--HFactor", str(np.round(np.random.uniform(0.5, 2.0), 2)),
+                "--FFactor", str(np.round(np.random.uniform(0.5, 2.0), 2)),
+                "--BFactor", str(np.round(np.random.uniform(0.5, 2.0), 2)),
+                "--EFactor", str(np.round(np.random.uniform(0.5, 2.0), 2))
+            ]
+            subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            return None
+
+        csv_file = "/home/s2686742/Cell2Fire/results/Sub20x20v1/Grids/Grids6/ForestGrid08.csv"
+        if not os.path.exists(csv_file):
+            return None
+
         try:
             data = np.loadtxt(csv_file, delimiter=',')
         except Exception as e:
-            print(f"Error reading {csv_file}: {e}")
             return None
 
-        # Apply penalty if a selected index is not surrounded by 1s
-        penalty_value = -10  # Adjust penalty as needed
-        rows, cols = data.shape
-
-        for index in topk_indices:
-            r, c = index // cols, index % cols  # Convert 1D index to 2D row/col
-
-            # Get 8-neighbor values (handle edge cases)
-            neighbors = data[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
-
-            # Check if all surrounding cells (excluding center) are 1
-            if not np.all(neighbors == 1):
-                data[r, c] += penalty_value  # Apply penalty
-
-        # Save the modified grid (optional)
-        np.savetxt(csv_file, data, delimiter=",", fmt="%d")
-
-        # Compute the final proportion of 1s in the modified grid
-        total_zeros = np.sum(data == 0)
-        total_ones = np.sum(data == 1)
-
+        flat_data = np.array(data).flatten()
+        total_zeros = np.sum(flat_data == 0)
+        total_ones = np.sum(flat_data == 1)
         total = total_zeros + total_ones
         if total == 0:
-            print("No 0s or 1s found in the CSV file!")
             return None
 
         prop_ones = total_ones / total
-        return prop_ones
+        penalty_value = -.1  # Adjust penalty as needed
+        rows, cols = data.shape
+        penalty = 0
+        for index in topk_indices:
+            r, c = index // cols, index % cols  # Convert 1D index to 2D row/col
+
+    # Get the 3x3 neighborhood
+            neighbors = data[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
+
+    # Check if at least one neighboring cell (excluding center) is 1
+            if np.all(neighbors == 0):  
+                penalty += penalty_value  # Sum the penalty
+
+        
+        
+        return (1/prop_ones-1) + penalty
+
 
     def simulate_fire_episode(self, state, action):
         """
@@ -128,7 +185,7 @@ class PPOAgent:
         reward = self.run_random_cell2fire_and_analyze(state, topk_indices)
 
         # Compute final reward
-        return (1 / reward) - 1 if reward is not None else -1
+        return reward if reward is not None else -1
 
 
     
