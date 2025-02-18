@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 import numpy as np
+import shutil
 from ActorCriticNetworks import ActorCriticNetwork
 import subprocess
 import os
@@ -63,9 +64,65 @@ class PPOAgent:
             self.reward_net = None
 
     def run_random_cell2fire_and_analyze(self, state):
-        # Define the input and output directories (adjust as needed)
+        # Define folder paths
         input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
+        new_folder = "/home/s2686742/Cell2Fire/data/Sub20x20_Test/"
         output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v1"
+
+        # Copy the input folder to new_folder if it doesn't exist already
+        if not os.path.exists(new_folder):
+            try:
+                shutil.copytree(input_folder, new_folder)
+                print(f"Copied {input_folder} to {new_folder}.")
+            except Exception as e:
+                print(f"Error copying folder: {e}")
+                return None
+        else:
+            print(f"Folder {new_folder} already exists. Using existing folder.")
+
+        # Update the Forest.asc file in the new folder
+        asc_file = os.path.join(new_folder, "Forest.asc")
+        try:
+            with open(asc_file, 'r') as f:
+                lines = f.readlines()
+        except Exception as e:
+            print(f"Error reading {asc_file}: {e}")
+            return None
+
+        # Define the number of header lines (adjust as needed)
+        num_header_lines = 6
+        if len(lines) < num_header_lines:
+            print("Unexpected file format: not enough header lines.")
+            return None
+
+        header_lines = lines[:num_header_lines]
+
+        # Ensure the state is a NumPy array with shape (20, 20)
+        if hasattr(state, 'detach'):  # if it's a torch tensor
+            state = state.detach().cpu().numpy()
+        else:
+            state = np.array(state)
+
+        if state.shape != (20, 20):
+            print(f"State has shape {state.shape} but expected (20, 20).")
+            return None
+
+        # Build the new grid lines from the state
+        grid_lines = []
+        for row in state:
+            # Convert each number to a string; adjust formatting if needed
+            row_str = " ".join(str(val) for val in row)
+            grid_lines.append(row_str + "\n")
+
+        # Write the header and new grid back to Forest.asc
+        new_file_content = header_lines + grid_lines
+        try:
+            with open(asc_file, 'w') as f:
+                f.writelines(new_file_content)
+            print(f"Updated grid in {asc_file}.")
+        except Exception as e:
+            print(f"Error writing to {asc_file}: {e}")
+            return None
 
         # Randomly assign values to numeric parameters using numpy.random:
         sim_years = int(np.random.randint(1, 6))             # 1 to 5 years
@@ -84,19 +141,19 @@ class PPOAgent:
         # Construct the command as a list (to avoid shell quoting issues)
         cmd = [
             "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/./Cell2Fire",
-            "--input-instance-folder", input_folder,
+            "--input-instance-folder", new_folder,
             "--output-folder", output_folder,
             "--ignitions",
-            "--sim-years", str(1),
-            "--nsims", str(20),
-            "--grids", str(10),
+            "--sim-years", str(sim_years),
+            "--nsims", str(nsims),
+            "--grids", str(grids),
             "--final-grid",
             "--Fire-Period-Length", str(fire_period_len),
             "--weather", "rows",
             "--nweathers", str(nweathers),
             "--output-messages",
-            "--ROS-CV", str(0.0),
-            "--seed", str(1),
+            "--ROS-CV", str(ros_cv),
+            "--seed", str(seed),
             "--IgnitionRad", str(ignition_rad),
             "--HFactor", str(hfactor),
             "--FFactor", str(ffactor),
