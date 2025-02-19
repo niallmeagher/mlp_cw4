@@ -129,7 +129,7 @@ class PPOAgent:
                 "--BFactor", str(np.round(np.random.uniform(0.5, 2.0), 2)),
                 "--EFactor", str(np.round(np.random.uniform(0.5, 2.0), 2))
             ]
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             return None
 
@@ -266,9 +266,7 @@ class PPOAgent:
             dist, values = self.network(states, masks)
             probs = F.softmax(dist.logits, dim=-1)
             actions_ = actions.view(states.size(0), -1)
-            #Compute log probabilities for the 20 actions (shape: (batch, 20))
-            print("probs.shape:", probs.shape)
-            print("actions_.shape:", actions_.shape)
+            
             new_log_probs = torch.log(probs.gather(1, actions_) + 1e-10)
             if old_log_probs.dim() == 3 and old_log_probs.size(1) == 1:
                 old_log_probs = old_log_probs.squeeze(1)
