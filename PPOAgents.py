@@ -265,10 +265,10 @@ class PPOAgent:
             #Re-evaluate actions & values with current policy
             dist, values = self.network(states, masks)
             probs = F.softmax(dist.logits, dim=-1)
-            actions_ = actions
-            if actions_.dim() == 1:
-                actions_ = actions_.unsqueeze(0)
+            actions_ = actions.view(states.size(0), -1)
             #Compute log probabilities for the 20 actions (shape: (batch, 20))
+            print("probs.shape:", probs.shape)
+            print("actions_.shape:", actions_.shape)
             new_log_probs = torch.log(probs.gather(1, actions_) + 1e-10)
             # Sum the log probs for each trajectory to get the joint log-probability
             new_log_probs_sum = new_log_probs.sum(dim=1)
