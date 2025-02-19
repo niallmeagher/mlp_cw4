@@ -270,6 +270,8 @@ class PPOAgent:
             print("probs.shape:", probs.shape)
             print("actions_.shape:", actions_.shape)
             new_log_probs = torch.log(probs.gather(1, actions_) + 1e-10)
+            if old_log_probs.dim() == 3 and old_log_probs.size(1) == 1:
+                old_log_probs = old_log_probs.squeeze(1)
             # Sum the log probs for each trajectory to get the joint log-probability
             new_log_probs_sum = new_log_probs.sum(dim=1)
             old_log_probs_sum = old_log_probs.sum(dim=1)
