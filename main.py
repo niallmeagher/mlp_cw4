@@ -88,7 +88,7 @@ def main():
             'true_rewards': []
         }
         total_reward = 0.0
-
+        prev_state = None
         for episode in range(episodes_per_epoch):
             # Environment reset: a dummy 20x20 grid state.
             state = tensor_input.clone()  # For example, an empty grid.
