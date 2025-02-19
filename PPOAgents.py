@@ -178,21 +178,21 @@ class PPOAgent:
         final_average = np.mean(computed_values)
         return final_average
 
-    def simulate_fire_episode(self, state, actions):
+    def simulate_fire_episode(self, state, action):
         # 'actions' is expected to be a tensor of shape (B, 20) with flat indices.
         # For a single state (B=1), squeeze the batch dimension:
-        selected_actions = actions.squeeze(0)  # shape: (20,)
-    
-        # Convert flat indices to 2D coordinates
-        rows = selected_actions // state.size(3)
-        cols = selected_actions % state.size(3)
+        topk_values, topk_indices = torch.topk(action.flatten(), k=20)
+
+    # Convert flat indices to 2D coordinates
+        rows = topk_indices // action.size(1)
+        cols = topk_indices % action.size(1)
     
         # Update state: set these cells to 101 (firebreak)
         state[:, :, rows, cols] = 101
         
     
         # Run simulation and compute reward based on the chosen firebreaks.
-        reward = self.run_random_cell2fire_and_analyze(state, selected_actions)
+        reward = self.run_random_cell2fire_and_analyze(state, topk_indices)
     
         return reward, state
 
