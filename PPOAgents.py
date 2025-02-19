@@ -293,6 +293,7 @@ class PPOAgent:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            print(loss)
         # Assume trajectories include 'true_rewards' computed from simulation.
         if self.learned_reward and 'true_rewards' in trajectories:
             predicted_rewards = self.reward_net(
