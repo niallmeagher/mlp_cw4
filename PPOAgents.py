@@ -66,7 +66,7 @@ class PPOAgent:
     def run_random_cell2fire_and_analyze(self, state, topk_indices):
         input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
         new_folder = "/home/s2686742/Cell2Fire/data/Sub20x20_Test/"
-        output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v1"
+        output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v2"
 
         if not os.path.exists(new_folder):
             try:
@@ -112,9 +112,9 @@ class PPOAgent:
                 "--input-instance-folder", new_folder,
                 "--output-folder", output_folder,
                 "--ignitions",
-                "--sim-years", str(np.random.randint(1, 6)),
-                "--nsims", str(np.random.randint(1, 11)),
-                "--grids", str(np.random.randint(5, 21)),
+                "--sim-years", str(1),
+                "--nsims", str(21),
+                "--grids", str(32),
                 "--final-grid",
                 "--Fire-Period-Length", str(np.round(np.random.uniform(0.5, 3.0), 2)),
                 "--weather", "rows",
@@ -132,7 +132,7 @@ class PPOAgent:
         except subprocess.CalledProcessError as e:
             return None
 
-        csv_file = "/home/s2686742/Cell2Fire/results/Sub20x20v1/Grids/Grids6/ForestGrid08.csv"
+        csv_file = "/home/s2686742/Cell2Fire/results/Sub20x20v2/Grids/Grids6/ForestGrid08.csv"
         if not os.path.exists(csv_file):
             return None
 
