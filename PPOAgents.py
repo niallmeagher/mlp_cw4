@@ -203,12 +203,12 @@ class PPOAgent:
         if mask is not None:
             mask = mask.to(self.device)
         dist, value = self.network(state, mask)
-        probs = F.softmax(dist.logits, dim=-1)  # shape: (B, 400)
-        # Instead of sampling, select the top 20 highest probability actions.
-        actions = torch.topk(probs, k=20, dim=-1).indices  # shape: (B, 20)
-        # Gather log probabilities for each selected action
-        log_probs = torch.log(probs.gather(1, actions) + 1e-10)  # shape: (B, 20)
-        return actions, log_probs, value, probs
+        probs = F.softmax(dist.logits, dim=-1)
+        probs = probs.reshape(20, 20)
+        action = dist.sample()
+        log_prob = dist.log_prob(action)
+       
+        return action.item(), log_prob, value, probs
 
     def reward_function(self, state, action):
         """
@@ -266,18 +266,20 @@ class PPOAgent:
             dist, values = self.network(states, masks)
             probs = F.softmax(dist.logits, dim=-1)
             actions_ = actions.view(states.size(0), -1)
-            
+            new_log_probs = dist.log_prob(actions)
+            """
             new_log_probs = torch.log(probs.gather(1, actions_) + 1e-10)
             if old_log_probs.dim() == 3 and old_log_probs.size(1) == 1:
                 old_log_probs = old_log_probs.squeeze(1)
             # Sum the log probs for each trajectory to get the joint log-probability
             new_log_probs_sum = new_log_probs.sum(dim=1)
             old_log_probs_sum = old_log_probs.sum(dim=1)
-    
+            """
             entropy = dist.entropy().mean()
     
             #PPO ratio for the joint probability
-            ratio = torch.exp(new_log_probs_sum - old_log_probs_sum)
+            #ratio = torch.exp(new_log_probs_sum - old_log_probs_sum)
+            ratio = torch.exp(new_log_probs - old_log_probs)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
             policy_loss = -torch.min(surr1, surr2).mean()
