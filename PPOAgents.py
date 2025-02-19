@@ -195,7 +195,7 @@ class PPOAgent:
         # Run simulation and compute reward based on the chosen firebreaks.
         reward = self.run_random_cell2fire_and_analyze(state, selected_actions)
     
-        return reward if reward is not None else -1
+        return reward, state
 
 
     
