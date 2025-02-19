@@ -93,7 +93,7 @@ def main():
             # Environment reset: a dummy 20x20 grid state.
             state = tensor_input.clone()  # For example, an empty grid.
             # Assume all actions are valid.
-            valid_actions_mask = mask
+            valid_actions_mask = torch.ones(1, 400)
 
             # Select an action.
             action, log_prob, value, real_action = agent.select_action(state, mask=valid_actions_mask)
