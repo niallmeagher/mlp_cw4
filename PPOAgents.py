@@ -204,11 +204,10 @@ class PPOAgent:
             mask = mask.to(self.device)
         dist, value = self.network(state, mask)
         probs = F.softmax(dist.logits, dim=-1)  # shape: (B, 400)
-        # Sample 20 distinct actions (firebreak placements) without replacement
-        actions = torch.multinomial(probs, num_samples=20, replacement=False)  # shape: (B, 20)
-         # Gather log probabilities for each selected action
+        # Instead of sampling, select the top 20 highest probability actions.
+        actions = torch.topk(probs, k=20, dim=-1).indices  # shape: (B, 20)
+        # Gather log probabilities for each selected action
         log_probs = torch.log(probs.gather(1, actions) + 1e-10)  # shape: (B, 20)
-    
         return actions, log_probs, value, probs
 
     def reward_function(self, state, action):
