@@ -104,15 +104,16 @@ def main():
             # Simulate the fire episode to get a true reward.
             true_reward = agent.simulate_fire_episode(state[:,0:1,:,:], real_action)
             #true_reward = agent.simulate_test_episode(state, action)
-            """
+            
             total_reward += true_reward
+            """
             if prev_state is not None:
                 print(state2 - prev_state)
             prev_state = state2
             """
             # For this one-step episode, the return is the true reward.
             trajectories['states'].append(state)
-            trajectories['actions'].append(action)
+            trajectories['actions'].append(torch.tensor(action, dtype=torch.long))
             trajectories['log_probs'].append(log_prob)
             trajectories['values'].append(value)
             trajectories['returns'].append(
