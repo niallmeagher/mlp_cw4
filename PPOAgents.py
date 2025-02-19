@@ -189,6 +189,8 @@ class PPOAgent:
     
         # Update state: set these cells to 101 (firebreak)
         state[:, :, rows, cols] = 101
+        print(state.size())
+        print(state[:, :, rows, cols])
     
         # Run simulation and compute reward based on the chosen firebreaks.
         reward = self.run_random_cell2fire_and_analyze(state, selected_actions)
