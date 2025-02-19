@@ -96,22 +96,20 @@ def main():
             valid_actions_mask = torch.ones(1, 400)
 
             # Select an action.
-            action, log_prob, value, real_action  = agent.select_action(
-                state, mask=valid_actions_mask)
+            actions, log_probs, value, _ = agent.select_action(state, mask=valid_actions_mask)
 
             # Use the learnable reward function to predict a reward (if desired).
             #pred_reward = agent.reward_function(state, action)
 
             # Simulate the fire episode to get a true reward.
-            true_reward = agent.simulate_fire_episode(state[:,0:1,:,:], real_action)
+            true_reward = agent.simulate_fire_episode(state[:,0:1,:,:], actions)
             #true_reward = agent.simulate_test_episode(state, action)
             total_reward += true_reward
 
             # For this one-step episode, the return is the true reward.
             trajectories['states'].append(state)
-            trajectories['actions'].append(
-                torch.tensor(action, dtype=torch.long))
-            trajectories['log_probs'].append(log_prob)
+            trajectories['actions'].append(actions)
+            trajectories['log_probs'].append(log_probs)
             trajectories['values'].append(value)
             trajectories['returns'].append(
                 torch.tensor([true_reward], dtype=torch.float32))

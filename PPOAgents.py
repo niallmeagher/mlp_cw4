@@ -178,45 +178,37 @@ class PPOAgent:
         final_average = np.mean(computed_values)
         return final_average
 
-    def simulate_fire_episode(self, state, action):
-        """
-        Selects the top 20 values in 'action' and modifies 'state' accordingly.
-        """
-        # Get the top 20 highest action values and their indices
-        topk_values, topk_indices = torch.topk(action.flatten(), k=20)
-
+    def simulate_fire_episode(self, state, actions):
+        # 'actions' is expected to be a tensor of shape (B, 20) with flat indices.
+        # For a single state (B=1), squeeze the batch dimension:
+        selected_actions = actions.squeeze(0)  # shape: (20,)
+    
         # Convert flat indices to 2D coordinates
-        rows = topk_indices // action.size(1)
-        cols = topk_indices % action.size(1)
-
-        # Update state based on the selected indices
+        rows = selected_actions // state.size(3)
+        cols = selected_actions % state.size(3)
+    
+        # Update state: set these cells to 101 (firebreak)
         state[:, :, rows, cols] = 101
-
-        # Run Cell2Fire simulation and analyze the results
-        reward = self.run_random_cell2fire_and_analyze(state, topk_indices)
-
-        # Compute final reward
+    
+        # Run simulation and compute reward based on the chosen firebreaks.
+        reward = self.run_random_cell2fire_and_analyze(state, selected_actions)
+    
         return reward if reward is not None else -1
 
 
     
     def select_action(self, state, mask=None):
-        """
-        Given a state (and an optional mask of valid actions), return:
-          - the chosen action (as an integer),
-          - its log-probability,
-          - and the value estimate for the state.
-        """
         state = state.to(self.device)
         if mask is not None:
             mask = mask.to(self.device)
         dist, value = self.network(state, mask)
-        probs = F.softmax(dist.logits, dim=-1)
-        probs = probs.reshape(20, 20)
-        action = dist.sample()
-        log_prob = dist.log_prob(action)
-       
-        return action.item(), log_prob, value, probs
+        probs = F.softmax(dist.logits, dim=-1)  # shape: (B, 400)
+        # Sample 20 distinct actions (firebreak placements) without replacement
+        actions = torch.multinomial(probs, num_samples=20, replacement=False)  # shape: (B, 20)
+         # Gather log probabilities for each selected action
+        log_probs = torch.log(probs.gather(1, actions) + 1e-10)  # shape: (B, 20)
+    
+        return actions, log_probs, value, probs
 
     def reward_function(self, state, action):
         """
@@ -270,24 +262,28 @@ class PPOAgent:
             masks = masks.to(self.device)
 
         for _ in range(self.update_epochs):
-            # Re-evaluate actions & values with current policy
+            #Re-evaluate actions & values with current policy
             dist, values = self.network(states, masks)
-            new_log_probs = dist.log_prob(actions)
+            probs = F.softmax(dist.logits, dim=-1)
+            #Compute log probabilities for the 20 actions (shape: (batch, 20))
+            new_log_probs = torch.log(probs.gather(1, actions) + 1e-10)
+            # Sum the log probs for each trajectory to get the joint log-probability
+            new_log_probs_sum = new_log_probs.sum(dim=1)
+            old_log_probs_sum = old_log_probs.sum(dim=1)
+    
             entropy = dist.entropy().mean()
-
-            # PPO ratio for clipped objective
-            ratio = torch.exp(new_log_probs - old_log_probs)
+    
+            #PPO ratio for the joint probability
+            ratio = torch.exp(new_log_probs_sum - old_log_probs_sum)
             surr1 = ratio * advantages
-            surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon,
-                                1.0 + self.clip_epsilon) * advantages
+            surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
             policy_loss = -torch.min(surr1, surr2).mean()
 
-            # Value function loss (mean squared error)
+            #Value function loss (mean squared error)
             value_loss = F.mse_loss(values.squeeze(-1), returns)
 
-            # Total loss with entropy bonus (to encourage exploration)
-            loss = policy_loss + self.value_loss_coef * \
-                value_loss - self.entropy_coef * entropy
+            #Total loss with entropy bonus (to encourage exploration)
+            loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
 
             self.optimizer.zero_grad()
             loss.backward()
