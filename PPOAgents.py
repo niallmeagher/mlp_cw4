@@ -67,6 +67,7 @@ class PPOAgent:
         input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
         new_folder = "/home/s2686742/Cell2Fire/data/Sub20x20_Test/"
         output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v2"
+        num_grids = 10
 
         if not os.path.exists(new_folder):
             try:
@@ -105,7 +106,7 @@ class PPOAgent:
                 f.writelines(new_file_content)
         except Exception as e:
             return None
-
+        
         try:
             cmd = [
                 "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/./Cell2Fire",
@@ -113,7 +114,7 @@ class PPOAgent:
                 "--output-folder", output_folder,
                 "--ignitions",
                 "--sim-years", str(1),
-                "--nsims", str(21),
+                "--nsims", str(num_grids),
                 "--grids", str(32),
                 "--final-grid",
                 "--Fire-Period-Length", str(np.round(np.random.uniform(0.5, 3.0), 2)),
@@ -132,40 +133,50 @@ class PPOAgent:
         except subprocess.CalledProcessError as e:
             return None
 
-        csv_file = "/home/s2686742/Cell2Fire/results/Sub20x20v2/Grids/Grids6/ForestGrid08.csv"
-        if not os.path.exists(csv_file):
+        # --- NEW FUNCTIONALITY ADDED HERE ---
+        # Instead of processing a single CSV file in Grids6, loop through Grids1, Grids2, ..., GridsN
+        base_grids_folder = os.path.join(output_folder, "Grids")
+          # Change this value to N if you have more grid folders
+
+        computed_values = []
+        for i in range(1, num_grids + 1):
+            csv_file = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
+            if not os.path.exists(csv_file):
+                continue
+            try:
+                data = np.loadtxt(csv_file, delimiter=',')
+            except Exception as e:
+                continue
+
+            flat_data = data.flatten()
+            total_zeros = np.sum(flat_data == 0)
+            total_ones = np.sum(flat_data == 1)
+            total = total_zeros + total_ones
+            if total == 0:
+                continue
+
+            prop_ones = total_ones / total
+            penalty_value = -0.1  # Adjust penalty as needed
+            rows, cols = data.shape
+            penalty = 0
+            for index in topk_indices:
+                r, c = index // cols, index % cols  # Convert 1D index to 2D row/col
+
+                # Get the 3x3 neighborhood
+                neighbors = data[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
+
+                # Check if the entire neighborhood is zeros (you may adjust this check if needed)
+                if np.all(neighbors == 0):  
+                    penalty += penalty_value
+
+            computed_value = (1 / prop_ones )- 1 + penalty
+            computed_values.append(computed_value)
+
+        if not computed_values:
             return None
 
-        try:
-            data = np.loadtxt(csv_file, delimiter=',')
-        except Exception as e:
-            return None
-
-        flat_data = np.array(data).flatten()
-        total_zeros = np.sum(flat_data == 0)
-        total_ones = np.sum(flat_data == 1)
-        total = total_zeros + total_ones
-        if total == 0:
-            return None
-
-        prop_ones = total_ones / total
-        penalty_value = -.1  # Adjust penalty as needed
-        rows, cols = data.shape
-        penalty = 0
-        for index in topk_indices:
-            r, c = index // cols, index % cols  # Convert 1D index to 2D row/col
-
-    # Get the 3x3 neighborhood
-            neighbors = data[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
-
-    # Check if at least one neighboring cell (excluding center) is 1
-            if np.all(neighbors == 0):  
-                penalty += penalty_value  # Sum the penalty
-
-        
-        
-        return (1/prop_ones-1) + penalty
-
+        final_average = np.mean(computed_values)
+        return final_average
 
     def simulate_fire_episode(self, state, action):
         """
