@@ -72,8 +72,8 @@ def main():
     ]
     tensor_input = read_multi_channel_asc(files)
     # Main training loop
-    mask = tensor_input[:,0,:,:] != 101
-    mask = mask.squeeze()
+    mask = tensor_input[0,0,:,:] != 101
+    mask = mask.view(1,400)
     print(mask)
     for epoch in range(num_epochs):
         # Containers for storing trajectories (each episode is assumed to be one step for simplicity)
@@ -93,11 +93,11 @@ def main():
             # Environment reset: a dummy 20x20 grid state.
             state = tensor_input.clone()  # For example, an empty grid.
             # Assume all actions are valid.
-            valid_actions_mask = torch.ones(1, 400)
-
+           # valid_actions_mask = torch.ones(1, 400)
+            valid_actions_mask = mask
             # Select an action.
             action, log_prob, value, real_action = agent.select_action(state, mask=valid_actions_mask)
-            print(value)
+            print("Value", value)
             # Use the learnable reward function to predict a reward (if desired).
             #pred_reward = agent.reward_function(state, action)
 
@@ -121,7 +121,8 @@ def main():
             trajectories['masks'].append(valid_actions_mask)
             trajectories['true_rewards'].append(
                 torch.tensor([true_reward], dtype=torch.float32))
-
+            print(valid_actions_mask.shape)
+          
         # Convert lists into tensors.
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'])
