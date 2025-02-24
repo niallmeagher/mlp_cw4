@@ -178,9 +178,25 @@ class PPOAgent:
         final_average = np.mean(computed_values)
         return final_average
 
-    def simulate_fire_episode(self, state, action):
+    def simulate_fire_episode(self, state, action, eps_greedy = False):
         # 'actions' is expected to be a tensor of shape (B, 20) with flat indices.
         # For a single state (B=1), squeeze the batch dimension:
+        if eps_greedy == True:
+            print("EPSILON")
+            indices = torch.nonzero(action, as_tuple=True)[0]
+            perm = torch.randperm(indices.numel())
+            topk_indices = indices[perm[:20]]
+            print("TOPK", topk_indices)
+    # Convert flat indices to 2D coordinates
+            rows = topk_indices // action.size(1)
+            cols = topk_indices % action.size(1)
+        # Update state: set these cells to 101 (firebreak)
+            state[:, :, rows, cols] = 101
+        # Run simulation and compute reward based on the chosen firebreaks.
+            reward = self.run_random_cell2fire_and_analyze(state, topk_indices)
+    
+            return reward
+
         topk_values, topk_indices = torch.topk(action.flatten(), k=20)
 
     # Convert flat indices to 2D coordinates
@@ -198,10 +214,20 @@ class PPOAgent:
 
 
     
-    def select_action(self, state, mask=None):
+    def select_action(self, state, mask=None, eps_greedy = False):
         state = state.to(self.device)
         if mask is not None:
             mask = mask.to(self.device)
+        if eps_greedy == True:
+            dist2, value = self.network(state, mask)
+            actor_logits = actor_logits.masked_fill(mask == 0, -1e10)
+            dist = Categorical(logits=actor_logits)
+            probs = F.softmax(dist.logits, dim=-1)
+            probs = probs.reshape(20, 20)
+            action = dist.sample()
+            log_prob = dist.log_prob(action)
+            return action.item(), log_prob, value, probs
+
         dist, value = self.network(state, mask)
         probs = F.softmax(dist.logits, dim=-1)
         probs = probs.reshape(20, 20)
