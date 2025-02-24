@@ -314,6 +314,7 @@ class PPOAgent:
             print(policy_loss, self.value_loss_coef, value_loss, self.entropy_coef, entropy)
             self.optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
             self.optimizer.step()
             print("LOSS", loss)
         # Update reward network if used.
