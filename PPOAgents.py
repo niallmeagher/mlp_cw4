@@ -220,7 +220,7 @@ class PPOAgent:
             mask = mask.to(self.device)
         if eps_greedy == True:
             dist2, value = self.network(state, mask)
-            actor_logits = actor_logits.masked_fill(mask == 0, -1e10)
+            actor_logits = mask.float()
             dist = Categorical(logits=actor_logits)
             probs = F.softmax(dist.logits, dim=-1)
             probs = probs.reshape(20, 20)
