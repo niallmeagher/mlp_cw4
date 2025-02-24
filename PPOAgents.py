@@ -263,6 +263,7 @@ class PPOAgent:
         for reward, done in zip(reversed(rewards), reversed(dones)):
             if done:
                 R = 0  # If episode ended, reset the cumulative reward.
+            print("R:", reward, R)
             R = reward + self.gamma * R
             returns.insert(0, R)
         returns = torch.tensor(returns, dtype=torch.float32, device=self.device)
