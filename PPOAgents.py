@@ -44,7 +44,7 @@ class RewardFunction(nn.Module):
 
 class PPOAgent:
     def __init__(self, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
-                 value_loss_coef=0.5, entropy_coef=0.01, gamma=0.99, update_epochs=4, learned_reward=False):
+                 value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=4, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -303,7 +303,7 @@ class PPOAgent:
 
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
-            delta = torch.clamp(new_log_probs - old_log_probs, -10, 10)
+            delta = torch.clamp(new_log_probs - old_log_probs, -100, 100)
             ratio = torch.exp(delta)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
