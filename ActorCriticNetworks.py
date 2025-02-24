@@ -34,6 +34,7 @@ class ActorCriticNetwork(nn.Module):
     def forward(self, x, mask=None):
         # Shared CNN forward pass
         x = x.float()
+       # print(x)
         x = self.conv1(x)
         x = self.pool(x)
         x = self.dropout(x)
@@ -41,13 +42,16 @@ class ActorCriticNetwork(nn.Module):
         x = self.pool(x)
         x = self.dropout(x)
         x = x.view(x.size(0), -1)  # Now x should have shape (B, 256)
-
+       # print(x)
         # Actor branch
         actor_hidden = F.relu(self.actor_fc1(x))
+       # print(actor_hidden)
         actor_hidden = F.relu(self.actor_fc2(actor_hidden))
         actor_logits = self.actor_out(actor_hidden)  # (B, num_actions)
+#        print("ACTOR1",actor_logits)
         if mask is not None:
             actor_logits = actor_logits.masked_fill(mask == 0, -1e10)
+ #       print("ACTOR", actor_logits)
         dist = Categorical(logits=actor_logits)
 
         # Critic branch

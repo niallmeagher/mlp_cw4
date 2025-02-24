@@ -51,7 +51,7 @@ def main():
     # Build a mask for valid actions from the first channel.
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
-    print(mask)
+   # print(mask)
     for epoch in range(num_epochs):
         trajectories = {
             'states': [],
@@ -69,9 +69,9 @@ def main():
             eps_greedy = False
             state = tensor_input.clone()  # Reset environment state.
             valid_actions_mask = mask
-            if np.random.uniform() <= 0.05:
-                eps_greedy = True
-                print("Epsilon!")
+#            if np.random.uniform() <= 0.05:
+ #               eps_greedy = True
+  #              print("Epsilon!")
             action_indices, log_prob, value, real_action = agent.select_action(state, valid_actions_mask, eps_greedy)
             print(value)
             
@@ -89,7 +89,7 @@ def main():
             trajectories['dones'].append(done)
             trajectories['masks'].append(valid_actions_mask)
             trajectories['true_rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
-            print(valid_actions_mask.shape)
+   #         print(valid_actions_mask.shape)
           
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'])  # shape (episodes, 20)
