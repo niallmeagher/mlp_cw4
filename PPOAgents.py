@@ -292,7 +292,7 @@ class PPOAgent:
 
         for _ in range(self.update_epochs):
             # Re-evaluate actions & values with current policy
-            dist, values = self.network.eval(states, masks)
+            dist, values = self.network(states, masks)
             # For each trajectory, compute the aggregated log probability for the stored 20 actions.
             new_log_probs = []
             for i in range(states.size(0)):

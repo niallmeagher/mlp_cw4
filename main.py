@@ -51,7 +51,7 @@ def main():
     # Build a mask for valid actions from the first channel.
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
-    print(mask)
+   # print(mask)
     for epoch in range(num_epochs):
         trajectories = {
             'states': [],
@@ -91,7 +91,7 @@ def main():
             trajectories['dones'].append(done)
             trajectories['masks'].append(valid_actions_mask)
             trajectories['true_rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
-            print(valid_actions_mask.shape)
+           # print(valid_actions_mask.shape)
           
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'])  # shape (episodes, 20)
