@@ -98,7 +98,7 @@ def main():
            # valid_actions_mask = torch.ones(1, 400)
             valid_actions_mask = mask
             # Select an action.
-            if np.random.uniform() <= 0.1:
+            if np.random.uniform() <= 0.05:
                 eps_greedy = True
             action, log_prob, value, real_action = agent.select_action(state, valid_actions_mask, eps_greedy)
             print(value)
