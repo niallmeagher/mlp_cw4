@@ -295,8 +295,9 @@ class PPOAgent:
             # For each trajectory, compute the aggregated log probability for the stored 20 actions.
             new_log_probs = []
             for i in range(states.size(0)):
-                action_indices = actions[i]  # tensor of shape (20,)
-                new_log_probs.append(dist.log_prob(action_indices).sum())
+    # Compute distribution for the individual episode
+                dist_i, _ = self.network(states[i:i+1], masks[i:i+1] if masks is not None else None)
+                new_log_probs.append(dist_i.log_prob(actions[i]).sum())
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
             ratio = torch.exp(new_log_probs - old_log_probs)
