@@ -259,6 +259,7 @@ class PPOAgent:
         # New: trajectories now include 'rewards' and 'dones' for long-term return computation.
         states = trajectories['states'].to(self.device)
         actions = trajectories['actions'].to(self.device)
+        print(actions)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
         rewards = trajectories['rewards']  # list/tensor of immediate rewards
         dones = trajectories['dones']      # list/tensor of done flags (1 if episode ended)
