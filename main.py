@@ -99,7 +99,8 @@ def main():
         trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
-
+        print(trajectories['states'])
+        print(trajectories['masks'])
         agent.update(trajectories)
         avg_reward = total_reward / episodes_per_epoch
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")

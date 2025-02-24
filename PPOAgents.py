@@ -226,6 +226,7 @@ class PPOAgent:
             selected = allowed_indices[selected_idx]
         # Compute log probability based on the uniform distribution over allowed actions.
             log_prob = torch.log(uniform_probs[selected_idx]).sum()
+            print('Eps:', selected,log_prob, probs)
             return selected, log_prob, value, probs
         else:
         # Standard approach: use the network's logits to select the top 20 actions.
@@ -324,7 +325,8 @@ class PPOAgent:
         masks = trajectories.get('masks', None)
         if masks is not None:
             masks = masks.to(self.device)
-
+        print("MASKS", masks)
+        print("STATES", states)
         for _ in range(self.update_epochs):
             # Re-evaluate actions & values with current policy
             dist, values = self.network(states, masks)
