@@ -12,7 +12,6 @@ import subprocess
 import os
 import glob
 
-
 class RewardFunction(nn.Module):
     def __init__(self, state_channels=1, state_size=20, num_actions=400):
         super(RewardFunction, self).__init__()
@@ -196,53 +195,15 @@ class PPOAgent:
         # Run simulation and compute reward based on the chosen firebreaks.
         reward = self.run_random_cell2fire_and_analyze(state, action_indices.cpu().numpy())
         return reward
+
     def select_action(self, state, mask=None, eps_greedy=False):
         """
-        Returns:
-        action_indices: tensor of shape (20,) containing the selected 20 indices.
-        log_prob: aggregated log probability for the 20 selected actions.
-        value: critic value for the state.
-        probs: reshaped probabilities grid (20 x 20) for reference.
-        """
-        state = state.to(self.device)
-        if mask is not None:
-            mask = mask.to(self.device)
-    
-    # Always compute the network output (logits and value)
-        dist, value = self.network(state, mask)
-        probs = F.softmax(dist.logits, dim=-1)
-        probs = probs.reshape(20, 20)
-        flat_logits = dist.logits.flatten()  # shape (400,)
-    
-        if eps_greedy == True:
-        # Epsilon-greedy: ignore the network logits and sample uniformly
-            print("TRUE_EPS")
-            flat_mask = mask.flatten().float()  # binary mask as float
-            allowed_indices = torch.nonzero(flat_mask, as_tuple=False).squeeze()
-            if allowed_indices.numel() < 20:
-                raise ValueError("Not enough allowed actions to sample 20 unique actions without replacement.")
-        # Uniform probabilities over allowed actions
-            uniform_probs = torch.ones(allowed_indices.size(0), device=self.device) / allowed_indices.size(0)
-            selected_idx = torch.multinomial(uniform_probs, num_samples=20, replacement=False)
-            selected = allowed_indices[selected_idx]
-        # Compute log probability based on the uniform distribution over allowed actions.
-            log_prob = torch.log(uniform_probs[selected_idx]).sum()
-#            print('Eps:', selected,log_prob, probs)
-            return selected, log_prob, value, probs
-        else:
-        # Standard approach: use the network's logits to select the top 20 actions.
-            topk_values, topk_indices = torch.topk(flat_logits, k=20)
-            log_prob = dist.log_prob(topk_indices).sum()
-            return topk_indices, log_prob, value, probs
-    """
-    def select_action(self, state, mask=None, eps_greedy=False):
-        
         Returns:
             action_indices: tensor of shape (20,) containing the selected 20 indices.
             log_prob: aggregated log probability for the 20 selected actions.
             value: critic value for the state.
             probs: reshaped probabilities grid (20 x 20) for reference.
-        
+        """
         state = state.to(self.device)
         if mask is not None:
             mask = mask.to(self.device)
@@ -275,7 +236,7 @@ class PPOAgent:
         # (You could also compute them individually and sum them.)
         log_prob = dist.log_prob(topk_indices).sum()
         return topk_indices, log_prob, value, probs
-     """
+
     def reward_function(self, state, action):
         """
         Use the learnable reward function to predict a reward given a state and action.
@@ -326,11 +287,9 @@ class PPOAgent:
         masks = trajectories.get('masks', None)
         if masks is not None:
             masks = masks.to(self.device)
-  #      print("MASKS", masks)
- #       print("STATES", states)
+
         for _ in range(self.update_epochs):
             # Re-evaluate actions & values with current policy
-   #         print("FINAL", states, masks)
             dist, values = self.network(states, masks)
             # For each trajectory, compute the aggregated log probability for the stored 20 actions.
             new_log_probs = []
@@ -338,6 +297,7 @@ class PPOAgent:
     # Compute distribution for the individual episode
                 dist_i, _ = self.network(states[i:i+1], masks[i:i+1] if masks is not None else None)
                 new_log_probs.append(dist_i.log_prob(actions[i]).sum())
+
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
             ratio = torch.exp(new_log_probs - old_log_probs)
@@ -364,7 +324,6 @@ class PPOAgent:
         true_reward = 1 - (abs(action - TARGET_ACTION) / TARGET_ACTION)
         true_reward = max(0.0, true_reward)
         return torch.tensor(true_reward, dtype=torch.float32)
-
 
 
 '''
