@@ -75,7 +75,7 @@ def main():
             '''
             action_indices, log_prob, value, real_action = agent.select_action(state, valid_actions_mask, eps_greedy)
             
-            print(value)
+            print("Value", value)
             
             # Simulate the fire episode to get the true reward.
             true_reward = agent.simulate_fire_episode(state[:,0:1,:,:], action_indices, eps_greedy)

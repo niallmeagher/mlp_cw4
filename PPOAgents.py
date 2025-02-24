@@ -166,7 +166,7 @@ class PPOAgent:
                 if np.all(neighbors == 0):  
                     penalty += penalty_value
 
-            computed_value = (1 / prop_ones) - 1 + penalty
+            computed_value = (1 / (prop_ones+ 1e-8)) - 1 + penalty
             computed_values.append(computed_value)
 
         if not computed_values:
@@ -310,7 +310,7 @@ class PPOAgent:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-            print(loss)
+            print("LOSS", loss)
         # Update reward network if used.
         if self.learned_reward and 'true_rewards' in trajectories:
             predicted_rewards = self.reward_net(states.detach(), actions.detach()[:, 0])  # adjust if needed
