@@ -216,6 +216,7 @@ class PPOAgent:
     
         if eps_greedy == True:
         # Epsilon-greedy: ignore the network logits and sample uniformly
+            print("TRUE_EPS")
             flat_mask = mask.flatten().float()  # binary mask as float
             allowed_indices = torch.nonzero(flat_mask, as_tuple=False).squeeze()
             if allowed_indices.numel() < 20:
