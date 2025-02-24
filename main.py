@@ -71,6 +71,7 @@ def main():
             valid_actions_mask = mask
             if np.random.uniform() <= 0.05:
                 eps_greedy = True
+                print("Epsilon!")
             action_indices, log_prob, value, real_action = agent.select_action(state, valid_actions_mask, eps_greedy)
             print(value)
             
