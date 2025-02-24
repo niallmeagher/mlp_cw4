@@ -282,6 +282,7 @@ class PPOAgent:
         returns = self.compute_returns(rewards, dones, old_values, next_value)
         advantages = returns - old_values
         # Normalize advantages for stability
+        print(advantages.std())
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         advantages = advantages.detach()
         masks = trajectories.get('masks', None)
@@ -300,13 +301,15 @@ class PPOAgent:
 
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
-            ratio = torch.exp(new_log_probs - old_log_probs)
+            delta = torch.clamp(new_log_probs - old_log_probs, -10, 10)
+            ratio = torch.exp(delta)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
+            print("Surr", surr1, surr2)
             policy_loss = -torch.min(surr1, surr2).mean()
             value_loss = F.mse_loss(values.squeeze(-1), returns)
             loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
-
+            print(policy_loss, self.value_loss_coef, value_loss, self.entropy_coef, entropy)
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
