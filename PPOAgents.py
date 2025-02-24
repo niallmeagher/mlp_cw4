@@ -184,7 +184,6 @@ class PPOAgent:
             indices = torch.nonzero(action, as_tuple=True)[0]
             perm = torch.randperm(indices.numel())
             topk_indices = perm[:20]
-            print("TOPK", topk_indices, perm[:20])
             # Convert flat indices to 2D coordinates
             rows = topk_indices // action.size(1)
             cols = topk_indices % action.size(1)
@@ -259,7 +258,7 @@ class PPOAgent:
         # New: trajectories now include 'rewards' and 'dones' for long-term return computation.
         states = trajectories['states'].to(self.device)
         actions = trajectories['actions'].to(self.device)
-        print(actions)
+        print("Actions", actions)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
         rewards = trajectories['rewards']  # list/tensor of immediate rewards
         dones = trajectories['dones']      # list/tensor of done flags (1 if episode ended)
@@ -291,7 +290,7 @@ class PPOAgent:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-            print(loss)
+            print("Loss", loss)
         # Update reward network if used.
         if self.learned_reward and 'true_rewards' in trajectories:
             predicted_rewards = self.reward_net(states.detach(), actions.detach())

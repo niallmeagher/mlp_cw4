@@ -70,7 +70,7 @@ def main():
     tensor_input = read_multi_channel_asc(files)
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
-    print(mask)
+    
     for epoch in range(num_epochs):
         trajectories = {
             'states': [],
@@ -92,7 +92,7 @@ def main():
             if np.random.uniform() <= 0.05:
                 eps_greedy = True
             action, log_prob, value, real_action = agent.select_action(state, valid_actions_mask, eps_greedy)
-            print(value)
+            print("Value", value)
             
             # Simulate the fire episode to get the true reward.
             true_reward = agent.simulate_fire_episode(state[:,0:1,:,:], real_action, eps_greedy)
@@ -108,7 +108,7 @@ def main():
             trajectories['dones'].append(done)
             trajectories['masks'].append(valid_actions_mask)
             trajectories['true_rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
-            print(valid_actions_mask.shape)
+            
           
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'])
