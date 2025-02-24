@@ -56,13 +56,10 @@ def read_multi_channel_asc(files, header_lines=6):
 def main():
     # Hyperparameters
     num_epochs = 1000          # Number of PPO update cycles
-    episodes_per_epoch = 3    # Number of episodes (trajectories) to collect per update
+    episodes_per_epoch = 3     # Number of episodes (trajectories) to collect per update
 
-    # Initialize PPO Agent (this creates the network, optimizer, etc.)
-   # agent = PPOAgent(learned_reward=False)
-    #csv_forest = "/home/s2686742/Cell2Fire/data/Sub20x20/Forest.asc"
-    #tensor_forest = read_asc_to_tensor(csv_forest)
-    agent = PPOAgent(input_channels=4, learned_reward=False)  # Update input channels
+    # Initialize PPO Agent (update input channels if needed)
+    agent = PPOAgent(input_channels=4, learned_reward=False)
     
     files = [
         "/home/s2686742/Cell2Fire/data/Sub20x20/Forest.asc",
@@ -71,80 +68,60 @@ def main():
         "/home/s2686742/Cell2Fire/data/Sub20x20/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
-    # Main training loop
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
     print(mask)
     for epoch in range(num_epochs):
-        # Containers for storing trajectories (each episode is assumed to be one step for simplicity)
         trajectories = {
             'states': [],
             'actions': [],
             'log_probs': [],
             'values': [],
-            'returns': [],
+            # NEW: store immediate rewards and done flags.
+            'rewards': [],
+            'dones': [],
             'masks': [],
-            # This mask is used for action validity (here all actions are valid)
             'true_rewards': []
         }
         total_reward = 0.0
-        prev_state = None
         
         for episode in range(episodes_per_epoch):
             eps_greedy = False
-            # Environment reset: a dummy 20x20 grid state.
-            state = tensor_input.clone()  # For example, an empty grid.
-            # Assume all actions are valid.
-           # valid_actions_mask = torch.ones(1, 400)
+            state = tensor_input.clone()  # Reset environment state.
             valid_actions_mask = mask
-            # Select an action.
             if np.random.uniform() <= 0.05:
                 eps_greedy = True
             action, log_prob, value, real_action = agent.select_action(state, valid_actions_mask, eps_greedy)
             print(value)
             
-            # Use the learnable reward function to predict a reward (if desired).
-            #pred_reward = agent.reward_function(state, action)
-
-            # Simulate the fire episode to get a true reward.
+            # Simulate the fire episode to get the true reward.
             true_reward = agent.simulate_fire_episode(state[:,0:1,:,:], real_action, eps_greedy)
-            
-            #true_reward = agent.simulate_test_episode(state, action)
-            
             total_reward += true_reward
-            """
-            if prev_state is not None:
-                print(state2 - prev_state)
-            prev_state = state2
-            """
-            # For this one-step episode, the return is the true reward.
+            
+            # For a one-step episode, done is True.
+            done = torch.tensor(1, dtype=torch.uint8)
             trajectories['states'].append(state)
             trajectories['actions'].append(torch.tensor(action, dtype=torch.long))
             trajectories['log_probs'].append(log_prob)
             trajectories['values'].append(value)
-            trajectories['returns'].append(
-                torch.tensor([true_reward], dtype=torch.float32))
+            trajectories['rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
+            trajectories['dones'].append(done)
             trajectories['masks'].append(valid_actions_mask)
-            trajectories['true_rewards'].append(
-                torch.tensor([true_reward], dtype=torch.float32))
+            trajectories['true_rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
             print(valid_actions_mask.shape)
           
-        # Convert lists into tensors.
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'])
         trajectories['log_probs'] = torch.stack(trajectories['log_probs'])
         trajectories['values'] = torch.cat(trajectories['values'], dim=0)
-        trajectories['returns'] = torch.cat(
-            trajectories['returns'], dim=0).squeeze(-1)
+        trajectories['rewards'] = torch.cat(trajectories['rewards'], dim=0).squeeze(-1)
+        trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
-        trajectories['true_rewards'] = torch.cat(
-            trajectories['true_rewards'], dim=0).squeeze(-1)
+        trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
 
-        # Update the policy and reward function.
         agent.update(trajectories)
         avg_reward = total_reward / episodes_per_epoch
-        print(
-            f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
+        print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
 
     test_state = torch.zeros(1, 1, 20, 20)
     test_mask = torch.ones(1, 400)
@@ -154,5 +131,6 @@ def main():
     print(f"Estimated Value: {value.item():.4f}")
     test_true_reward = agent.simulate_test_episode(test_state, action)
     print(f"Test True Reward: {test_true_reward.item():.4f}")
+
 if __name__ == '__main__':
     main()

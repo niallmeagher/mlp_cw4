@@ -12,7 +12,6 @@ import subprocess
 import os
 import glob
 
-
 class RewardFunction(nn.Module):
     def __init__(self, state_channels=1, state_size=20, num_actions=400):
         super(RewardFunction, self).__init__()
@@ -136,7 +135,6 @@ class PPOAgent:
         # --- NEW FUNCTIONALITY ADDED HERE ---
         # Instead of processing a single CSV file in Grids6, loop through Grids1, Grids2, ..., GridsN
         base_grids_folder = os.path.join(output_folder, "Grids")
-          # Change this value to N if you have more grid folders
 
         computed_values = []
         for i in range(1, num_grids + 1):
@@ -169,7 +167,7 @@ class PPOAgent:
                 if np.all(neighbors == 0):  
                     penalty += penalty_value
 
-            computed_value = (1 / prop_ones )- 1 + penalty
+            computed_value = (1 / prop_ones) - 1 + penalty
             computed_values.append(computed_value)
 
         if not computed_values:
@@ -178,48 +176,39 @@ class PPOAgent:
         final_average = np.mean(computed_values)
         return final_average
 
-    def simulate_fire_episode(self, state, action, eps_greedy = False):
+    def simulate_fire_episode(self, state, action, eps_greedy=False):
         # 'actions' is expected to be a tensor of shape (B, 20) with flat indices.
         # For a single state (B=1), squeeze the batch dimension:
-        if eps_greedy == True:
+        if eps_greedy:
             print("EPSILON")
             indices = torch.nonzero(action, as_tuple=True)[0]
             perm = torch.randperm(indices.numel())
-            #topk_indices = indices[perm[:20]]
             topk_indices = perm[:20]
             print("TOPK", topk_indices, perm[:20])
-    # Convert flat indices to 2D coordinates
+            # Convert flat indices to 2D coordinates
             rows = topk_indices // action.size(1)
             cols = topk_indices % action.size(1)
-        # Update state: set these cells to 101 (firebreak)
+            # Update state: set these cells to 101 (firebreak)
             state[:, :, rows, cols] = 101
-        # Run simulation and compute reward based on the chosen firebreaks.
+            # Run simulation and compute reward based on the chosen firebreaks.
             reward = self.run_random_cell2fire_and_analyze(state, topk_indices)
-    
             return reward
 
         topk_values, topk_indices = torch.topk(action.flatten(), k=20)
-
-    # Convert flat indices to 2D coordinates
+        # Convert flat indices to 2D coordinates
         rows = topk_indices // action.size(1)
         cols = topk_indices % action.size(1)
-    
         # Update state: set these cells to 101 (firebreak)
         state[:, :, rows, cols] = 101
-        
-    
         # Run simulation and compute reward based on the chosen firebreaks.
         reward = self.run_random_cell2fire_and_analyze(state, topk_indices)
-    
         return reward
 
-
-    
-    def select_action(self, state, mask=None, eps_greedy = False):
+    def select_action(self, state, mask=None, eps_greedy=False):
         state = state.to(self.device)
         if mask is not None:
             mask = mask.to(self.device)
-        if eps_greedy == True:
+        if eps_greedy:
             dist2, value = self.network(state, mask)
             actor_logits = mask.float()
             dist = Categorical(logits=actor_logits)
@@ -234,7 +223,6 @@ class PPOAgent:
         probs = probs.reshape(20, 20)
         action = dist.sample()
         log_prob = dist.log_prob(action)
-       
         return action.item(), log_prob, value, probs
 
     def reward_function(self, state, action):
@@ -244,8 +232,7 @@ class PPOAgent:
         if self.learned_reward:
             # Use the reward network (make sure state and action are on the correct device)
             state = state.to(self.device)
-            action_tensor = torch.tensor(
-                [action], dtype=torch.long, device=self.device)
+            action_tensor = torch.tensor([action], dtype=torch.long, device=self.device)
             pred_reward = self.reward_net(state, action_tensor)
             return pred_reward
         else:
@@ -256,9 +243,7 @@ class PPOAgent:
             true_reward = max(0.0, true_reward)
             return torch.tensor(true_reward, dtype=torch.float32, device=self.device)
 
-
     def compute_returns(self, rewards, dones, values, next_value):
-        
         returns = []
         R = next_value
         # Iterate in reverse (from last step to first)
@@ -267,78 +252,60 @@ class PPOAgent:
                 R = 0  # If episode ended, reset the cumulative reward.
             R = reward + self.gamma * R
             returns.insert(0, R)
-        returns = torch.tensor(
-            returns, dtype=torch.float32, device=self.device)
+        returns = torch.tensor(returns, dtype=torch.float32, device=self.device)
         return returns
 
     def update(self, trajectories):
-       
+        # New: trajectories now include 'rewards' and 'dones' for long-term return computation.
         states = trajectories['states'].to(self.device)
         actions = trajectories['actions'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
-        returns = trajectories['returns'].to(self.device).detach()
-        old_values = trajectories['values'].to(
-            self.device).squeeze(-1).detach()
+        rewards = trajectories['rewards']  # list/tensor of immediate rewards
+        dones = trajectories['dones']      # list/tensor of done flags (1 if episode ended)
+        old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
+        # Get next value estimate from the last state in the trajectory
+        with torch.no_grad():
+            next_value = self.network(states[-1:])[1].detach().squeeze()
+        returns = self.compute_returns(rewards, dones, old_values, next_value)
         advantages = returns - old_values
         # Normalize advantages for stability
-        advantages = (advantages - advantages.mean()) / \
-            (advantages.std() + 1e-8)
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         advantages = advantages.detach()
         masks = trajectories.get('masks', None)
         if masks is not None:
             masks = masks.to(self.device)
 
         for _ in range(self.update_epochs):
-            #Re-evaluate actions & values with current policy
+            # Re-evaluate actions & values with current policy
             dist, values = self.network(states, masks)
-            probs = F.softmax(dist.logits, dim=-1)
-            actions_ = actions.view(states.size(0), -1)
             new_log_probs = dist.log_prob(actions)
-            """
-            new_log_probs = torch.log(probs.gather(1, actions_) + 1e-10)
-            if old_log_probs.dim() == 3 and old_log_probs.size(1) == 1:
-                old_log_probs = old_log_probs.squeeze(1)
-            # Sum the log probs for each trajectory to get the joint log-probability
-            new_log_probs_sum = new_log_probs.sum(dim=1)
-            old_log_probs_sum = old_log_probs.sum(dim=1)
-            """
             entropy = dist.entropy().mean()
-    
-            #PPO ratio for the joint probability
-            #ratio = torch.exp(new_log_probs_sum - old_log_probs_sum)
             ratio = torch.exp(new_log_probs - old_log_probs)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
             policy_loss = -torch.min(surr1, surr2).mean()
-
-            #Value function loss (mean squared error)
             value_loss = F.mse_loss(values.squeeze(-1), returns)
-
-            #Total loss with entropy bonus (to encourage exploration)
             loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
 
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
             print(loss)
-        # Assume trajectories include 'true_rewards' computed from simulation.
+        # Update reward network if used.
         if self.learned_reward and 'true_rewards' in trajectories:
-            predicted_rewards = self.reward_net(
-                states.detach(), actions.detach())
-            reward_loss = F.mse_loss(predicted_rewards.squeeze(-1),
-                                     trajectories['true_rewards'].to(self.device))
+            predicted_rewards = self.reward_net(states.detach(), actions.detach())
+            reward_loss = F.mse_loss(predicted_rewards.squeeze(-1), trajectories['true_rewards'].to(self.device))
             self.reward_optimizer.zero_grad()
             reward_loss.backward()
             self.reward_optimizer.step()   
+
     def simulate_test_episode(self, state, action):
-       
         TARGET_ACTION = 200
-        # Compute a reward that is 1 at the target and decays linearly.
         true_reward = 1 - (abs(action - TARGET_ACTION) / TARGET_ACTION)
-        # Clip reward to be at least 0.
         true_reward = max(0.0, true_reward)
         return torch.tensor(true_reward, dtype=torch.float32)
        
+
 
 '''
     def reward_function(self, state, action, next_state):
