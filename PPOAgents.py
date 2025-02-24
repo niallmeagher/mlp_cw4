@@ -185,7 +185,8 @@ class PPOAgent:
             print("EPSILON")
             indices = torch.nonzero(action, as_tuple=True)[0]
             perm = torch.randperm(indices.numel())
-            topk_indices = indices[perm[:20]]
+            #topk_indices = indices[perm[:20]]
+            topk_indices = perm[:20]
             print("TOPK", topk_indices, perm[:20])
     # Convert flat indices to 2D coordinates
             rows = topk_indices // action.size(1)
