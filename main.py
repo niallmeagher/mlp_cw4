@@ -43,7 +43,7 @@ def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=
         raise FileNotFoundError(f"No CSV files found in {folder2}")
     
     # Randomly select one CSV file
-    selected_file = random.choice(csv_files)
+    selected_file = np.random.choice(csv_files)
     destination_file = os.path.join(folder1, os.path.basename(selected_file))
     shutil.copy(selected_file, destination_file)
     
@@ -121,7 +121,7 @@ def main():
         total_reward = 0.0
         folder_sample_from = os.path.join("/home/s2686742/Cell2Fire/data/Sub20x20_Test/", "Weathers")
         folder_stored = os.path.join("/home/s2686742/Cell2Fire/data/Sub20x20_Test/", "Weathers_Stored")
-        tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, header=True)
+        tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
         
         for episode in range(episodes_per_epoch):
