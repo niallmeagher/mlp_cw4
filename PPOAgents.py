@@ -120,7 +120,7 @@ class PPOAgent:
                 "--nweathers", str(np.random.randint(1, 6)),
                 "--output-messages",
                 "--ROS-CV", str(np.round(np.random.uniform(0.0, 1.0), 2)),
-                "--seed", str(np.random.randint(1, 1001)),
+                "--seed", str(1),
                 "--IgnitionRad", str(np.random.randint(1, 6)),
                 "--HFactor", str(np.round(np.random.uniform(0.5, 2.0), 2)),
                 "--FFactor", str(np.round(np.random.uniform(0.5, 2.0), 2)),
@@ -225,7 +225,7 @@ class PPOAgent:
             return selected, log_prob, value, probs
 
         # Standard mode: use the network's logits.
-        dist, value = self.network(state, mask)
+        dist, value = self.network(state, mask = mask)
         probs = F.softmax(dist.logits, dim=-1)
         probs = probs.reshape(20, 20)
         # Sample once from the distribution, then select top 20 indices from the logits.
@@ -293,12 +293,12 @@ class PPOAgent:
 
         for _ in range(self.update_epochs):
             # Re-evaluate actions & values with current policy
-            dist, values = self.network(states, masks)
+            dist, values = self.network(states, mask = masks)
             # For each trajectory, compute the aggregated log probability for the stored 20 actions.
             new_log_probs = []
             for i in range(states.size(0)):
     # Compute distribution for the individual episode
-                dist_i, _ = self.network(states[i:i+1], masks[i:i+1] if masks is not None else None)
+                dist_i, _ = self.network(states[i:i+1], mask = masks[i:i+1] if masks is not None else None)
                 new_log_probs.append(dist_i.log_prob(actions[i]).sum())
 
             new_log_probs = torch.stack(new_log_probs)
