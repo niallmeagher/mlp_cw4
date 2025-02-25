@@ -6,7 +6,9 @@ import numpy as np
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
-dir = "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/"
+
+HOME_DIR = '/home/s2750319/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
+dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
 
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
@@ -96,10 +98,10 @@ def main():
     agent = PPOAgent(input_channels=4, learned_reward=False)
     
     files = [
-        "/home/s2686742/Cell2Fire/data/Sub20x20/Forest.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/elevation.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/saz.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/slope.asc"
+        f"{HOME_DIR}data/Sub20x20/Forest.asc",
+        f"{HOME_DIR}data/Sub20x20/elevation.asc",
+        f"{HOME_DIR}data/Sub20x20/saz.asc",
+        f"{HOME_DIR}data/Sub20x20/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
     # Build a mask for valid actions from the first channel.
@@ -119,8 +121,8 @@ def main():
             'weather': []
         }
         total_reward = 0.0
-        folder_sample_from = os.path.join("/home/s2686742/Cell2Fire/data/Sub20x20_Test/", "Weathers")
-        folder_stored = os.path.join("/home/s2686742/Cell2Fire/data/Sub20x20_Test/", "Weathers_Stored")
+        folder_sample_from = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers")
+        folder_stored = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers_Stored")
         tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
         

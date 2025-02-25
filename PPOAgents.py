@@ -12,6 +12,9 @@ import subprocess
 import os
 import glob
 
+HOME_DIR = '/home/s2750319/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
+
+
 class RewardFunction(nn.Module):
     def __init__(self, state_channels=1, state_size=20, num_actions=400):
         super(RewardFunction, self).__init__()
@@ -62,9 +65,9 @@ class PPOAgent:
             self.reward_net = None
 
     def run_random_cell2fire_and_analyze(self, state, topk_indices):
-        input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
-        new_folder = "/home/s2686742/Cell2Fire/data/Sub20x20_Test/"
-        output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v2"
+        input_folder = f"{HOME_DIR}data/Sub20x20/"
+        new_folder = f"{HOME_DIR}data/Sub20x20_Test/"
+        output_folder = f"{HOME_DIR}results/Sub20x20v2"
         num_grids = 10
 
         if not os.path.exists(new_folder):
@@ -107,7 +110,7 @@ class PPOAgent:
         
         try:
             cmd = [
-                "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/./Cell2Fire",
+                f"{HOME_DIR}cell2fire/Cell2FireC/./Cell2Fire",
                 "--input-instance-folder", new_folder,
                 "--output-folder", output_folder,
                 "--ignitions",
