@@ -90,7 +90,7 @@ def read_multi_channel_asc(files, header_lines=6):
 def main():
     # Hyperparameters
     num_epochs = 1000          # Number of PPO update cycles
-    episodes_per_epoch = 10    # Number of episodes (trajectories) to collect per update
+    episodes_per_epoch = 3    # Number of episodes (trajectories) to collect per update
 
     # Initialize PPO Agent (update input channels if needed)
     agent = PPOAgent(input_channels=4, learned_reward=False)
