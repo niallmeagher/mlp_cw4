@@ -46,7 +46,7 @@ class PPOAgent:
     def __init__(self, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
                  value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=4, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.network = ActorCriticNetwork(input_channels, num_actions).to(self.device)
+        self.network = ActorCriticNetwork(input_channels, num_actions, tabular = True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
         self.clip_epsilon = clip_epsilon
         self.value_loss_coef = value_loss_coef
@@ -196,7 +196,7 @@ class PPOAgent:
         reward = self.run_random_cell2fire_and_analyze(state, action_indices.cpu().numpy())
         return reward
 
-    def select_action(self, state, mask=None, eps_greedy=False):
+    def select_action(self, state, weather = None, mask=None, eps_greedy=False):
         """
         Returns:
             action_indices: tensor of shape (20,) containing the selected 20 indices.
@@ -225,7 +225,7 @@ class PPOAgent:
             return selected, log_prob, value, probs
 
         # Standard mode: use the network's logits.
-        dist, value = self.network(state, mask = mask)
+        dist, value = self.network(state, tabular = weather, mask = mask)
         probs = F.softmax(dist.logits, dim=-1)
         probs = probs.reshape(20, 20)
         # Sample once from the distribution, then select top 20 indices from the logits.
@@ -272,6 +272,8 @@ class PPOAgent:
     def update(self, trajectories):
         # trajectories now include 'rewards' and 'dones' for long-term return computation.
         states = trajectories['states'].to(self.device)
+        masks = trajectories['masks'].to(self.device)
+        weather = trajectories['weather'].to(self.device)
         actions = trajectories['actions'].to(self.device)  # actions now are of shape (batch, 20)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
         rewards = trajectories['rewards']  # list/tensor of immediate rewards
@@ -279,7 +281,7 @@ class PPOAgent:
         old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
         # Get next value estimate from the last state in the trajectory
         with torch.no_grad():
-            next_value = self.network(states[-1:])[1].detach().squeeze()
+            next_value = self.network(states[-1:], tabular = weather[-1:], mask = masks[-1:])[1].detach().squeeze()
         returns = self.compute_returns(rewards, dones, old_values, next_value)
         advantages = returns - old_values
         # Normalize advantages for stability
@@ -293,12 +295,12 @@ class PPOAgent:
 
         for _ in range(self.update_epochs):
             # Re-evaluate actions & values with current policy
-            dist, values = self.network(states, mask = masks)
+            dist, values = self.network(states, tabular = weather, mask = masks)
             # For each trajectory, compute the aggregated log probability for the stored 20 actions.
             new_log_probs = []
             for i in range(states.size(0)):
     # Compute distribution for the individual episode
-                dist_i, _ = self.network(states[i:i+1], mask = masks[i:i+1] if masks is not None else None)
+                dist_i, _ = self.network(states[i:i+1], tabular = weather[i:i+1], mask = masks[i:i+1] if masks is not None else None)
                 new_log_probs.append(dist_i.log_prob(actions[i]).sum())
 
             new_log_probs = torch.stack(new_log_probs)
