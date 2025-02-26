@@ -283,6 +283,7 @@ class PPOAgent:
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
             delta_log = torch.clamp(new_log_probs - old_log_probs, -10, 10)
+            print("PROBS", new_log_probs, old_log_probs,new_log_probs -old_log_probs, torch.exp(new_log_probs -old_log_probs) )
             ratio = torch.exp(delta_log)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
