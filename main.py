@@ -5,7 +5,7 @@ import numpy as np
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
-dir = "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/"
+dir = "/home/s2750265/Cell2Fire/cell2fire/Cell2FireC/"
 
 
 def read_asc_to_tensor(file_path, header_lines=6):
@@ -65,10 +65,10 @@ def main():
     agent = PPOAgent(input_channels=4, learned_reward=False)  # Update input channels
     
     files = [
-        "/home/s2686742/Cell2Fire/data/Sub20x20/Forest.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/elevation.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/saz.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/slope.asc"
+        "/home/s2750265/Cell2Fire/data/Sub20x20/Forest.asc",
+        "/home/s2750265/Cell2Fire/data/Sub20x20/elevation.asc",
+        "/home/s2750265/Cell2Fire/data/Sub20x20/saz.asc",
+        "/home/s2750265/Cell2Fire/data/Sub20x20/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
     # Main training loop

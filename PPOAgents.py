@@ -64,9 +64,9 @@ class PPOAgent:
             self.reward_net = None
 
     def run_random_cell2fire_and_analyze(self, state, topk_indices):
-        input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
-        new_folder = "/home/s2686742/Cell2Fire/data/Sub20x20_Test/"
-        output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v2"
+        input_folder = "/home/s2750265/Cell2Fire/data/Sub20x20/"
+        new_folder = "/home/s2750265/Cell2Fire/data/Sub20x20_Test/"
+        output_folder = "/home/s2750265/Cell2Fire/results/Sub20x20v2"
         num_grids = 10
 
         if not os.path.exists(new_folder):
@@ -105,11 +105,12 @@ class PPOAgent:
             with open(asc_file, 'w') as f:
                 f.writelines(new_file_content)
         except Exception as e:
+            print("Error writing")
             return None
         
         try:
             cmd = [
-                "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/./Cell2Fire",
+                "/home/s2750265/Cell2Fire/cell2fire/Cell2FireC/./Cell2Fire",
                 "--input-instance-folder", new_folder,
                 "--output-folder", output_folder,
                 "--ignitions",
@@ -131,6 +132,7 @@ class PPOAgent:
             ]
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
+            print("Cmd Error")
             return None
 
         # --- NEW FUNCTIONALITY ADDED HERE ---
