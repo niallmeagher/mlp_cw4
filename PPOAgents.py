@@ -269,6 +269,7 @@ class PPOAgent:
             next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
 
         advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
+        print(advantages,returns)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         advantages = advantages.detach()
 
@@ -289,12 +290,14 @@ class PPOAgent:
 
             value_loss = F.mse_loss(values.squeeze(-1), returns)
             loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
+            print(policy_loss, self.value_loss_coef, value_loss, self.entropy_coef, entropy)
 
             self.optimizer.zero_grad()
             loss.backward()
             # Optionally clip gradients:
             # torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
             self.optimizer.step()
+            print("LOSS", loss)
 
         if self.learned_reward and 'true_rewards' in trajectories:
             predicted_rewards = self.reward_net(states.detach(), actions.detach()[:, 0])
