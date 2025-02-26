@@ -6,12 +6,8 @@ import numpy as np
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
-<<<<<<< HEAD
-dir = "/home/s2750265/Cell2Fire/cell2fire/Cell2FireC/"
-=======
->>>>>>> f2567a2798f0f9a4ada0a9ff03e417a9007905ee
 
-HOME_DIR = '/home/s2750319/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
+HOME_DIR = '/home/s2750265/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
 dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
 
 
@@ -102,17 +98,10 @@ def main():
     agent = PPOAgent(input_channels=4, learned_reward=False)
     
     files = [
-<<<<<<< HEAD
-        "/home/s2750265/Cell2Fire/data/Sub20x20/Forest.asc",
-        "/home/s2750265/Cell2Fire/data/Sub20x20/elevation.asc",
-        "/home/s2750265/Cell2Fire/data/Sub20x20/saz.asc",
-        "/home/s2750265/Cell2Fire/data/Sub20x20/slope.asc"
-=======
         f"{HOME_DIR}data/Sub20x20/Forest.asc",
         f"{HOME_DIR}data/Sub20x20/elevation.asc",
         f"{HOME_DIR}data/Sub20x20/saz.asc",
         f"{HOME_DIR}data/Sub20x20/slope.asc"
->>>>>>> f2567a2798f0f9a4ada0a9ff03e417a9007905ee
     ]
     tensor_input = read_multi_channel_asc(files)
     # Build a mask for valid actions from the first channel.
