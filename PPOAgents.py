@@ -287,6 +287,7 @@ class PPOAgent:
             ratio = torch.exp(delta_log)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
+            print("RATIOS:", surr1, surr2, ratio, advantages)
             policy_loss = -torch.min(surr1, surr2).mean()
 
             value_loss = F.mse_loss(values.squeeze(-1), returns)
