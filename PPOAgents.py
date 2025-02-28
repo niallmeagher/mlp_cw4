@@ -171,7 +171,7 @@ class PPOAgent:
         final_average = np.mean(computed_values)
         return final_average
 
-    def simulate_fire_episode(self, state, action_indices, eps_greedy=False):
+    def simulate_fire_episode(self, state, action_indices):
         """
         state: tensor of shape (B, 1, 20, 20)
         action_indices: tensor containing 20 flat indices.
@@ -181,13 +181,12 @@ class PPOAgent:
         cols = action_indices % W
 
         state = state.clone()
-        for r, c in zip(rows, cols):
-            state[:, :, r, c] = 101
+        state[:, :, rows, cols] = 101
 
         reward = self.run_random_cell2fire_and_analyze(state, action_indices.cpu().numpy())
         return reward
 
-    def select_action(self, state, weather=None, mask=None, eps_greedy=False):
+    def select_action(self, state, weather=None, mask=None):
         """
         Returns:
             action_indices: tensor of shape (20,) containing the selected 20 indices.
@@ -198,17 +197,7 @@ class PPOAgent:
         state = state.to(self.device)
         if mask is not None:
             mask = mask.to(self.device)
-        if eps_greedy:
-            actor_logits = mask.float()
-            dist = Categorical(logits=actor_logits)
-            probs = F.softmax(dist.logits, dim=-1)
-            probs = probs.reshape(20, 20)
-            allowed_indices = torch.nonzero(mask.flatten(), as_tuple=False).squeeze()
-            perm = torch.randperm(allowed_indices.numel())
-            selected = allowed_indices[perm[:20]]
-            log_prob = dist.log_prob(selected).sum()
-            _, value = self.network(state, mask=mask)
-            return selected, log_prob, value, probs
+        
 
         dist, value = self.network(state, tabular=weather, mask=mask)
         probs = F.softmax(dist.logits, dim=-1)
