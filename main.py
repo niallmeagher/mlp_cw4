@@ -52,10 +52,8 @@ def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=
     Returns:
         torch.Tensor: Data from the CSV as a tensor of type torch.float32.
     """
-    # Ensure folder1 exists
     os.makedirs(folder1, exist_ok=True)
     
-    # 1. Clear folder1
     for filename in os.listdir(folder1):
         file_path = os.path.join(folder1, filename)
         try:
@@ -66,7 +64,6 @@ def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=
         except Exception as e:
             print(f"Failed to delete {file_path}. Reason: {e}")
     
-    # 2. Get a list of CSV files in folder2
     csv_files = glob.glob(os.path.join(folder2, "*.csv"))
     if not csv_files:
         raise FileNotFoundError(f"No CSV files found in {folder2}")
@@ -76,17 +73,12 @@ def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=
     destination_file = os.path.join(folder1, os.path.basename(selected_file))
     shutil.copy(selected_file, destination_file)
     
-    # 3. Load CSV data using numpy
-    # If there's a header, skip the first row. Note that np.genfromtxt can automatically skip the header.
     skip_rows = 1 if has_header else 0
-    # Use delimiter=',' assuming CSV format.
     data = np.genfromtxt(destination_file, delimiter=',', skip_header=skip_rows)
     
-    # 4. Drop the first drop_first_n_cols columns
     if drop_first_n_cols > 0:
         data = data[:, drop_first_n_cols:]
     
-    # 5. Convert the NumPy array to a PyTorch tensor (assuming numeric data)
     data_tensor = torch.tensor(data, dtype=torch.float32)
     return data_tensor
 
@@ -169,7 +161,7 @@ def main(start_epoch=0, checkpoint_path=None):
         
         for episode in range(episodes_per_epoch):
             
-            state = tensor_input.clone()  # Reset environment state.
+            state = tensor_input.clone()
             valid_actions_mask = mask
             
             action_indices, log_prob, value, real_action = agent.select_action(state, tabular_tensor, valid_actions_mask)
