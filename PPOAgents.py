@@ -1,4 +1,3 @@
-# Load in relevant libraries, and alias where appropriate
 import torch
 
 import torch.nn as nn
@@ -12,17 +11,16 @@ import subprocess
 import os
 import glob
 
+HOME_DIR = '/home/s2750265/Cell2Fire/'
+
 class RewardFunction(nn.Module):
     def __init__(self, state_channels=1, state_size=20, num_actions=400):
         super(RewardFunction, self).__init__()
-        # A small CNN to process the state (grid)
         self.conv1 = nn.Conv2d(
-            state_channels, 8, kernel_size=3, stride=1, padding=1)  # (B, 8, 20, 20)
-        self.pool = nn.MaxPool2d(2, 2)  # → (B, 8, 10, 10)
-        # After pooling, the state is flattened: 8 * 10 * 10 = 800.
-        # We then concatenate a one-hot encoding of the action (size: num_actions).
+            state_channels, 8, kernel_size=3, stride=1, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(800 + num_actions, 128)
-        self.fc2 = nn.Linear(128, 1)  # Outputs a single scalar reward
+        self.fc2 = nn.Linear(128, 1)
 
     def forward(self, state, action):
         """
@@ -30,15 +28,15 @@ class RewardFunction(nn.Module):
         action: tensor of shape (B,) with integer actions in [0, num_actions-1]
         """
         B = state.size(0)
-        x = F.relu(self.conv1(state))   # (B, 8, 20, 20)
-        x = self.pool(x)                # (B, 8, 10, 10)
-        x = x.view(B, -1)               # (B, 800)
+        x = F.relu(self.conv1(state))
+        x = self.pool(x)
+        x = x.view(B, -1)
         # One-hot encode the action.
         one_hot = torch.zeros(B, 400).to(state.device)
         one_hot.scatter_(1, action.unsqueeze(1), 1)
-        x = torch.cat([x, one_hot], dim=1)  # (B, 800+400 = 1200)
+        x = torch.cat([x, one_hot], dim=1)
         x = F.relu(self.fc1(x))
-        reward = self.fc2(x)  # (B, 1)
+        reward = self.fc2(x)
         return reward
 
 
@@ -65,10 +63,10 @@ class PPOAgent:
             self.reward_net = None
 
     def run_random_cell2fire_and_analyze(self, state, topk_indices):
-        # ... (same as your current implementation) ...
-        input_folder = "/home/s2686742/Cell2Fire/data/Sub20x20/"
-        new_folder = "/home/s2686742/Cell2Fire/data/Sub20x20_Test/"
-        output_folder = "/home/s2686742/Cell2Fire/results/Sub20x20v2"
+        
+        input_folder = f"{HOME_DIR}/data/Sub20x20/"
+        new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
+        output_folder = f"{HOME_DIR}/results/Sub20x20v2"
         num_grids = 10
 
         if not os.path.exists(new_folder):
@@ -111,7 +109,7 @@ class PPOAgent:
         
         try:
             cmd = [
-                "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/./Cell2Fire",
+                f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
                 "--input-instance-folder", new_folder,
                 "--output-folder", output_folder,
                 "--ignitions",
@@ -244,14 +242,13 @@ class PPOAgent:
         return advantages, returns
 
     def update(self, trajectories):
-        # Extract data from trajectories.
         states = trajectories['states'].to(self.device)
         masks = trajectories['masks'].to(self.device)
         weather = trajectories['weather'].to(self.device)
-        actions = trajectories['actions'].to(self.device)  # shape (batch, 20)
+        actions = trajectories['actions'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
-        rewards = trajectories['rewards']  # Tensor shape (steps,)
-        dones = trajectories['dones']      # Tensor shape (steps,)
+        rewards = trajectories['rewards']
+        dones = trajectories['dones']
         old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
 
         with torch.no_grad():
@@ -285,7 +282,6 @@ class PPOAgent:
 
             self.optimizer.zero_grad()
             loss.backward()
-            # Optionally clip gradients:
             # torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
             self.optimizer.step()
             print("LOSS", loss)

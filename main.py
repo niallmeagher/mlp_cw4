@@ -7,7 +7,35 @@ import csv
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
-dir = "/home/s2686742/Cell2Fire/cell2fire/Cell2FireC/"
+
+HOME_DIR = '/home/s2750265/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
+dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
+
+def save_checkpoint(agent, epoch, checkpoint_dir=f"{HOME_DIR}/data/Sub20x20_Test/Checkpoints"):
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
+    checkpoint = {
+        "epoch": epoch,
+        "model_state_dict": agent.network.state_dict(),
+        "optimizer_state_dict": agent.optimizer.state_dict(),
+        "learned_reward": agent.learned_reward
+    }
+    # Save the reward network if you're using one.
+    if agent.learned_reward and agent.reward_net is not None:
+        checkpoint["reward_net_state_dict"] = agent.reward_net.state_dict()
+    torch.save(checkpoint, checkpoint_path)
+    print(f"Checkpoint saved at {checkpoint_path}")
+
+
+def load_checkpoint(agent, checkpoint_path):
+    checkpoint = torch.load(checkpoint_path, map_location=agent.device)
+    agent.network.load_state_dict(checkpoint["model_state_dict"])
+    agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    if agent.learned_reward and "reward_net_state_dict" in checkpoint:
+        agent.reward_net.load_state_dict(checkpoint["reward_net_state_dict"])
+    start_epoch = checkpoint["epoch"]
+    print(f"Resuming training from epoch {start_epoch}")
+    return start_epoch
 
 def save_checkpoint(agent, epoch, checkpoint_dir="/home/s2686742/Cell2Fire/data/Sub20x20_Test/Checkpoints"):
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -50,10 +78,8 @@ def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=
     Returns:
         torch.Tensor: Data from the CSV as a tensor of type torch.float32.
     """
-    # Ensure folder1 exists
     os.makedirs(folder1, exist_ok=True)
     
-    # 1. Clear folder1
     for filename in os.listdir(folder1):
         file_path = os.path.join(folder1, filename)
         try:
@@ -64,7 +90,6 @@ def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=
         except Exception as e:
             print(f"Failed to delete {file_path}. Reason: {e}")
     
-    # 2. Get a list of CSV files in folder2
     csv_files = glob.glob(os.path.join(folder2, "*.csv"))
     if not csv_files:
         raise FileNotFoundError(f"No CSV files found in {folder2}")
@@ -74,17 +99,12 @@ def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=
     destination_file = os.path.join(folder1, os.path.basename(selected_file))
     shutil.copy(selected_file, destination_file)
     
-    # 3. Load CSV data using numpy
-    # If there's a header, skip the first row. Note that np.genfromtxt can automatically skip the header.
     skip_rows = 1 if has_header else 0
-    # Use delimiter=',' assuming CSV format.
     data = np.genfromtxt(destination_file, delimiter=',', skip_header=skip_rows)
     
-    # 4. Drop the first drop_first_n_cols columns
     if drop_first_n_cols > 0:
         data = data[:, drop_first_n_cols:]
     
-    # 5. Convert the NumPy array to a PyTorch tensor (assuming numeric data)
     data_tensor = torch.tensor(data, dtype=torch.float32)
     return data_tensor
 
@@ -121,7 +141,7 @@ def main(start_epoch=0, checkpoint_path=None):
 
     # Initialize PPO Agent (update input channels if needed)
     agent = PPOAgent(input_channels=4, learned_reward=False)
-
+    
     csv_file = "episode_results.csv"
     if not os.path.exists(csv_file):
         with open(csv_file, "w", newline="") as f:
@@ -134,10 +154,10 @@ def main(start_epoch=0, checkpoint_path=None):
         start_epoch = 0
 
     files = [
-        "/home/s2686742/Cell2Fire/data/Sub20x20/Forest.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/elevation.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/saz.asc",
-        "/home/s2686742/Cell2Fire/data/Sub20x20/slope.asc"
+        f"{HOME_DIR}data/Sub20x20/Forest.asc",
+        f"{HOME_DIR}data/Sub20x20/elevation.asc",
+        f"{HOME_DIR}data/Sub20x20/saz.asc",
+        f"{HOME_DIR}data/Sub20x20/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
     # Build a mask for valid actions from the first channel.
@@ -156,9 +176,12 @@ def main(start_epoch=0, checkpoint_path=None):
             'true_rewards': [],
             'weather': []
         }
+        epoch_rewards = []
+        epoch_values = []
+            
         total_reward = 0.0
-        folder_sample_from = os.path.join("/home/s2686742/Cell2Fire/data/Sub20x20_Test/", "Weathers")
-        folder_stored = os.path.join("/home/s2686742/Cell2Fire/data/Sub20x20_Test/", "Weathers_Stored")
+        folder_sample_from = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers")
+        folder_stored = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers_Stored")
         tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
         epoch_rewards = []
@@ -166,7 +189,7 @@ def main(start_epoch=0, checkpoint_path=None):
         
         for episode in range(episodes_per_epoch):
             
-            state = tensor_input.clone()  # Reset environment state.
+            state = tensor_input.clone()
             valid_actions_mask = mask
             
             action_indices, log_prob, value, real_action = agent.select_action(state, tabular_tensor, valid_actions_mask)
@@ -176,9 +199,9 @@ def main(start_epoch=0, checkpoint_path=None):
             # Simulate the fire episode to get the true reward.
             true_reward = agent.simulate_fire_episode(state[:,0:1,:,:], action_indices)
             total_reward += true_reward
-
             epoch_rewards.append(float(true_reward))
             epoch_values.append(float(value.item()))
+            
             
             # For a one-step episode, done is True.
             done = torch.tensor(1, dtype=torch.float32, device=agent.device)
@@ -227,6 +250,7 @@ def main(start_epoch=0, checkpoint_path=None):
     test_true_reward = agent.simulate_test_episode(test_state, action_indices[0])
     print(f"Test True Reward: {test_true_reward.item():.4f}")
     '''
+
 if __name__ == '__main__':
     checkpoint_file = None  # Replace with your file path if needed.
     main(start_epoch=0, checkpoint_path=checkpoint_file)
