@@ -95,6 +95,8 @@ def main(args):
     # Data folders
     input_dir = args['-i'] # e.g Sub20x20
     output_dir = args['-o']
+    output_file = open(f'{output_dir}/losses.csv','w')
+    output_file.write('epoch,reward\n')
 
     # Hyperparameters
     num_epochs = args['-n']          # Number of PPO update cycles
@@ -175,6 +177,7 @@ def main(args):
         agent.update(trajectories)
         avg_reward = total_reward / episodes_per_epoch
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
+        output_file.write(f"{epoch+1},{avg_reward:.4f}\n")
 
     test_state = torch.zeros(1, 1, 20, 20)
     test_mask = torch.ones(1, 400)
@@ -184,6 +187,7 @@ def main(args):
     print(f"Estimated Value: {value.item():.4f}")
     test_true_reward = agent.simulate_test_episode(test_state, action_indices[0])
     print(f"Test True Reward: {test_true_reward.item():.4f}")
+    output_file.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
