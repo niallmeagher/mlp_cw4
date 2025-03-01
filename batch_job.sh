@@ -131,7 +131,7 @@ NumEpisodes=$2 # eg 3
 InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/$3 # eg Sub20x20
 OutputFileDirectory=${SCRATCH_HOME}/$4 # eg Sub20x20
 
-COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py --epochs ${NumEpochs} --episodes ${NumEpisodes} --input_dir "${InputFileDirectory}" --output_dir "${OutputFileDirectory}""
+COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}""
 echo "Running provided command: ${COMMAND}"
 eval "${COMMAND}"
 echo "Command ran successfully!"
