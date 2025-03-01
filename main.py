@@ -3,12 +3,14 @@ import glob
 import torch
 import shutil
 import numpy as np
+import argparse
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
 
-HOME_DIR = '/home/s2750265/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
-dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
+# These shouldn't be necessary as directories are cl args now
+# HOME_DIR = '/home/s2750319/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
+# dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
 
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
@@ -89,25 +91,30 @@ def read_multi_channel_asc(files, header_lines=6):
         tensors.append(torch.tensor(grid_np))
     return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20, 20)
 
-def main():
+def main(args):
+    # Data folders
+    input_dir = args['-i'] # e.g Sub20x20
+    output_dir = args['-o']
+
     # Hyperparameters
-    num_epochs = 1000          # Number of PPO update cycles
-    episodes_per_epoch = 3    # Number of episodes (trajectories) to collect per update
+    num_epochs = args['-n']          # Number of PPO update cycles
+    episodes_per_epoch = args['-e']    # Number of episodes (trajectories) to collect per update
 
     # Initialize PPO Agent (update input channels if needed)
-    agent = PPOAgent(input_channels=4, learned_reward=False)
+    agent = PPOAgent(input_folder=f'{input_dir}/', new_folder=f'{input_dir}_Test/', output_folder=f'{output_dir}',
+                     input_channels=4, learned_reward=False)
     
     files = [
-        f"{HOME_DIR}data/Sub20x20/Forest.asc",
-        f"{HOME_DIR}data/Sub20x20/elevation.asc",
-        f"{HOME_DIR}data/Sub20x20/saz.asc",
-        f"{HOME_DIR}data/Sub20x20/slope.asc"
+        f"{input_dir}/Forest.asc",
+        f"{input_dir}/elevation.asc",
+        f"{input_dir}/saz.asc",
+        f"{input_dir}/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
     # Build a mask for valid actions from the first channel.
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
-   # print(mask)
+    # print(mask)
     for epoch in range(num_epochs):
         trajectories = {
             'states': [],
@@ -121,8 +128,8 @@ def main():
             'weather': []
         }
         total_reward = 0.0
-        folder_sample_from = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers")
-        folder_stored = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers_Stored")
+        folder_sample_from = os.path.join(input_dir, "Weathers")
+        folder_stored = os.path.join(input_dir, "Weathers_Stored")
         tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
         
@@ -153,8 +160,8 @@ def main():
             trajectories['weather'].append(tabular_tensor)
             trajectories['masks'].append(valid_actions_mask)
             trajectories['true_rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
-           # print(valid_actions_mask.shape)
-          
+            # print(valid_actions_mask.shape)
+        
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'])  # shape (episodes, 20)
         trajectories['log_probs'] = torch.stack(trajectories['log_probs'])
@@ -179,4 +186,10 @@ def main():
     print(f"Test True Reward: {test_true_reward.item():.4f}")
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n','--num_epochs', help='Number of taining epochs to perform', required=True)
+    parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)
+    parser.add_argument('-i','--input_dir', help='Path to folder containing input data', required=True)
+    parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
+    args = vars(parser.parse_args())
+    main(args)
