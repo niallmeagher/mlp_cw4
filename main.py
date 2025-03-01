@@ -95,6 +95,9 @@ def main(args):
     # Data folders
     input_dir = args['input_dir'] # e.g Sub20x20
     output_dir = args['output_dir']
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     output_file = open(f'{output_dir}/losses.csv','w')
     output_file.write('epoch,reward\n')
 
