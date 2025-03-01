@@ -131,7 +131,7 @@ NumEpisodes=$2 # eg 3
 InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/$3 # eg Sub20x20
 OutputFileDirectory=${SCRATCH_HOME}/$4 # eg Sub20x20
 
-COMMAND="python main.py --epochs ${NumEpochs} --episodes ${NumEpisodes} --input_dir "${dest_path}" --output_dir "${OutputFileDirectory}""
+COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py --epochs ${NumEpochs} --episodes ${NumEpisodes} --input_dir "${InputFileDirectory}" --output_dir "${OutputFileDirectory}""
 echo "Running provided command: ${COMMAND}"
 eval "${COMMAND}"
 echo "Command ran successfully!"
@@ -149,6 +149,8 @@ src_path=${OutputFileDirectory}
 dest_path=${data_path}/mlp_cw4/results/$4
 rsync --archive --update --compress --progress ${src_path}/ ${dest_path}
 
+# Delete folders from scratch space
+rm -rf ${SCRATCH_HOME}/
 
 # =========================
 # Post experiment logging
