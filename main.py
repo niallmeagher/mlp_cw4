@@ -93,14 +93,14 @@ def read_multi_channel_asc(files, header_lines=6):
 
 def main(args):
     # Data folders
-    input_dir = args['-i'] # e.g Sub20x20
-    output_dir = args['-o']
+    input_dir = args['input_dir'] # e.g Sub20x20
+    output_dir = args['output_dir']
     output_file = open(f'{output_dir}/losses.csv','w')
     output_file.write('epoch,reward\n')
 
     # Hyperparameters
-    num_epochs = args['-n']          # Number of PPO update cycles
-    episodes_per_epoch = args['-e']    # Number of episodes (trajectories) to collect per update
+    num_epochs = args['num_epochs']          # Number of PPO update cycles
+    episodes_per_epoch = args['episodes']    # Number of episodes (trajectories) to collect per update
 
     # Initialize PPO Agent (update input channels if needed)
     agent = PPOAgent(input_folder=f'{input_dir}/', new_folder=f'{input_dir}_Test/', output_folder=f'{output_dir}',
