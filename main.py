@@ -102,8 +102,8 @@ def main(args):
     output_file.write('epoch,reward\n')
 
     # Hyperparameters
-    num_epochs = args['num_epochs']          # Number of PPO update cycles
-    episodes_per_epoch = args['episodes']    # Number of episodes (trajectories) to collect per update
+    num_epochs = int(args['num_epochs'])          # Number of PPO update cycles
+    episodes_per_epoch = int(args['episodes'])    # Number of episodes (trajectories) to collect per update
 
     # Initialize PPO Agent (update input channels if needed)
     agent = PPOAgent(input_folder=f'{input_dir}/', new_folder=f'{input_dir}_Test/', output_folder=f'{output_dir}',
