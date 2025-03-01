@@ -3,10 +3,7 @@
 #
 # example usage:
 # ```
-# EXPT_FILE=experiments.txt  # <- this has a command to run on each line
-# NR_EXPTS=`cat ${EXPT_FILE} | wc -l`
-# MAX_PARALLEL_JOBS=12 
-# sbatch --array=1-${NR_EXPTS}%${MAX_PARALLEL_JOBS} slurm_arrayjob.sh $EXPT_FILE
+# sbatch batchjob.sh 1000 3 Sub20x20 Sub20x20
 # ```
 #
 # or, equivalently and as intended, with provided `run_experiement`:
@@ -99,13 +96,12 @@ echo "Moving input data to the compute node's scratch space: $SCRATCH_DISK"
 
 # input data directory path on the DFS - change line below if loc different
 data_path=/home/${USER}
-input_folder=Cell2Fire/data/$1
-src_path=${data_path}/${input_folder}
+
 
 
 # input data directory path on the scratch disk of the node
-dest_path=${SCRATCH_HOME}/${input_folder}
-mkdir -p ${dest_path}  # make it if required
+# dest_path=${SCRATCH_HOME}/${input_folder}
+# mkdir -p ${dest_path}  # make it if required
 
 # Important notes about rsync:
 # * the --compress option is going to compress the data before transfer to send
@@ -117,7 +113,9 @@ mkdir -p ${dest_path}  # make it if required
 # * for more about the (endless) rsync options, see the docs:
 #       https://download.samba.org/pub/rsync/rsync.html
 
-rsync --archive --update --compress --progress ${src_path}/ ${dest_path}
+# send over both mlp_cw4 and Cell2Fire folders
+
+rsync --archive --update --compress --progress ${data_path}/ ${SCRATCH_HOME}
 
 
 # ==============================
@@ -128,9 +126,10 @@ rsync --archive --update --compress --progress ${src_path}/ ${dest_path}
 # you execute `sbatch --array=1:100 ...` the jobs will get numbers 1 to 100
 # inclusive.
 
-NumEpochs=$2
-NumEpisodes=$3
-OutputFileDirectory=${SCRATCH_HOME}/$4
+NumEpochs=$1 # eg 1000
+NumEpisodes=$2 # eg 3
+InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/$3 # eg Sub20x20
+OutputFileDirectory=${SCRATCH_HOME}/$4 # eg Sub20x20
 
 COMMAND="python main.py --epochs ${NumEpochs} --episodes ${NumEpisodes} --input_dir "${dest_path}" --output_dir "${OutputFileDirectory}""
 echo "Running provided command: ${COMMAND}"
@@ -147,7 +146,7 @@ echo "Command ran successfully!"
 echo "Moving output data back to DFS"
 
 src_path=${OutputFileDirectory}
-dest_path=${data_path}/$4
+dest_path=${data_path}/mlp_cw4/results/$4
 rsync --archive --update --compress --progress ${src_path}/ ${dest_path}
 
 
