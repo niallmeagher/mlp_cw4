@@ -69,7 +69,7 @@ class PPOAgent:
         else:
             self.reward_net = None
 
-    def run_random_cell2fire_and_analyze(self, state, topk_indices, input_dir):
+    def run_random_cell2fire_and_analyze(self, state, topk_indices):
         # input_folder = f"{HOME_DIR}data/Sub20x20/"
         # new_folder = f"{HOME_DIR}data/Sub20x20_Test/"
         # output_folder = f"{HOME_DIR}results/Sub20x20v2"
