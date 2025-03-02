@@ -12,7 +12,10 @@ import subprocess
 import os
 import glob
 
-HOME_DIR = '/home/s2750265/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
+# Sets HOME_DIR based on student number
+# NOTE: this will only work on batch jobs now!!
+username = os.getenv('USER')
+HOME_DIR = os.path.join('/disk/scratch', username, 'cell2fire', 'Cell2FireC') + '/'
 
 
 class RewardFunction(nn.Module):
@@ -116,7 +119,7 @@ class PPOAgent:
         
         try:
             cmd = [
-                f"{HOME_DIR}cell2fire/Cell2FireC/./Cell2Fire",
+                f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", self.new_folder,
                 "--output-folder", self.output_folder,
                 "--ignitions",
