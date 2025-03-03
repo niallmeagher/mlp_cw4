@@ -147,7 +147,7 @@ echo "Moving output data back to DFS"
 
 src_path=${OutputFileDirectory}
 dest_path=${data_path}/mlp_cw4/results/$4
-rsync --archive --update --compress --progress ${src_path}/ ${dest_path}
+rsync  --archive --update --compress --progress ${src_path}/ ${dest_path}
 
 # Delete folders from scratch space
 rm -rf ${SCRATCH_HOME}/

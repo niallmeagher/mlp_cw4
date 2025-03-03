@@ -187,9 +187,9 @@ def main(args):
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
         output_file.write(f"{epoch+1},{avg_reward:.4f}\n")
 
-    test_state = torch.zeros(1, 1, 20, 20)
+    test_state = torch.zeros(1, 4, 20, 20)
     test_mask = torch.ones(1, 400)
-    action_indices, log_prob, value, _ = agent.select_action(test_state, mask=test_mask)
+    action_indices, log_prob, value, _ = agent.select_action(test_state,tabular_tensor,  mask=test_mask)
     print("\nFinal Test:")
     print(f"Chosen Action Indices: {action_indices}")
     print(f"Estimated Value: {value.item():.4f}")

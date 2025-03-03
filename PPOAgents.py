@@ -15,7 +15,7 @@ import glob
 # Sets HOME_DIR based on student number
 # NOTE: this will only work on batch jobs now!!
 username = os.getenv('USER')
-HOME_DIR = os.path.join('/disk/scratch', username, 'cell2fire', 'Cell2FireC') + '/'
+HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
 
 
 class RewardFunction(nn.Module):
