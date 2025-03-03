@@ -8,7 +8,26 @@ import csv
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
 
-HOME_DIR = '/home/s2750265/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="PPO Fire Management")
+    parser.add_argument('--epochs', type=int, default=1000, help='Number of epochs')
+    parser.add_argument('--episodes', type=int, default=3, help='Episodes per epoch')
+    parser.add_argument('--learning_rate', type=float, default=3e-4, help='Learning rate')
+    parser.add_argument('--clip_epsilon', type=float, default=0.2, help='Clip epsilon')
+    parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor')
+    parser.add_argument('--update_epochs', type=int, default=4, help='Update epochs')
+    parser.add_argument('--value_loss_coef', type=float, default=0.5, help='Value loss coefficient')
+    parser.add_argument('--entropy_coef', type=float, default=0.1, help='Entropy coefficient')
+    parser.add_argument('--input_dir', type=str, default="", help='Input directory for more complex IO')
+    parser.add_argument('--output_dir', type=str, default="", help='Output directory for more complex IO')
+
+    return parser.parse_args()
+
+args = parse_args()
+
+HOME_DIR = args.input_dir # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
 dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
 
 def save_checkpoint(agent, epoch, checkpoint_dir=f"{HOME_DIR}/data/Sub20x20_Test/Checkpoints"):
@@ -37,7 +56,7 @@ def load_checkpoint(agent, checkpoint_path):
     print(f"Resuming training from epoch {start_epoch}")
     return start_epoch
 
-def save_checkpoint(agent, epoch, checkpoint_dir="/home/s2686742/Cell2Fire/data/Sub20x20_Test/Checkpoints"):
+def save_checkpoint(agent, epoch, checkpoint_dir=f"{HOME_DIR}/data/Sub20x20_Test/Checkpoints"):
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
     checkpoint = {
@@ -135,12 +154,20 @@ def read_multi_channel_asc(files, header_lines=6):
     return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20, 20)
 
 def main(start_epoch=0, checkpoint_path=None):
-    # Hyperparameters
-    num_epochs = 1000          # Number of PPO update cycles
-    episodes_per_epoch = 10    # Number of episodes (trajectories) to collect per update
+    # Hyperparameters - Recieved from the parser
+    args = parse_args()
 
-    # Initialize PPO Agent (update input channels if needed)
-    agent = PPOAgent(input_channels=4, learned_reward=False)
+    num_epochs = args.epochs
+    episodes_per_epoch = args.episodes
+
+    # Get input and output directories
+    input_directory = args.input_dir
+    output_directory = args.output_dir
+
+    # Initialize PPO Agent with recieved hyperparameters
+    agent = PPOAgent(input_channels=4, learned_reward=False, lr=args.learning_rate,
+                     clip_epsilon=args.clip_epsilon, gamma=args.gamma, update_epochs=args.update_epochs,
+                     value_loss_coef=args.value_loss_coef, entropy_coef=args.entropy_coef)
     
     csv_file = "episode_results.csv"
     if not os.path.exists(csv_file):
@@ -154,10 +181,10 @@ def main(start_epoch=0, checkpoint_path=None):
         start_epoch = 0
 
     files = [
-        f"{HOME_DIR}data/Sub20x20/Forest.asc",
-        f"{HOME_DIR}data/Sub20x20/elevation.asc",
-        f"{HOME_DIR}data/Sub20x20/saz.asc",
-        f"{HOME_DIR}data/Sub20x20/slope.asc"
+        f"{input_directory}data/Sub20x20/Forest.asc",
+        f"{input_directory}data/Sub20x20/elevation.asc",
+        f"{input_directory}data/Sub20x20/saz.asc",
+        f"{input_directory}data/Sub20x20/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
     # Build a mask for valid actions from the first channel.
@@ -180,8 +207,8 @@ def main(start_epoch=0, checkpoint_path=None):
         epoch_values = []
             
         total_reward = 0.0
-        folder_sample_from = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers")
-        folder_stored = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers_Stored")
+        folder_sample_from = os.path.join(f"{input_directory}data/Sub20x20_Test/", "Weathers")
+        folder_stored = os.path.join(f"{input_directory}data/Sub20x20_Test/", "Weathers_Stored")
         tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
         epoch_rewards = []
