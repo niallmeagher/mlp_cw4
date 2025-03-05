@@ -84,7 +84,7 @@ class PPOAgent:
         first_col = np.array([row[0] for row in data])
 
     # Modify values based on indices
-        if is_csv:
+        if is_csv == True:
             for idx in topk_integers:
                 if 0 <= idx < len(first_col):  # Ensure index is within bounds
                     first_col[idx] = "NF"  # Example: Modify by doubling the value
