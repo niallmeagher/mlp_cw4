@@ -307,7 +307,7 @@ class PPOAgent:
             total_zeros_FB = np.sum(flat_data_FB == 0)
             total_ones_FB = np.sum(flat_data_FB == 1)
             total_FB = total_zeros_FB + total_ones_FB
-            difference = total_ones_FB - total_ones_base
+            difference = total_ones_base - total_ones_FB
             if total_FB == 0:
                 continue
 
