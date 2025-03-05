@@ -11,7 +11,7 @@ import subprocess
 import os
 import glob
 
-HOME_DIR = '/home/s2750265/Cell2Fire/'
+HOME_DIR = '/home/s2686742/Cell2Fire/'
 
 class RewardFunction(nn.Module):
     def __init__(self, state_channels=1, state_size=20, num_actions=400):
@@ -67,6 +67,7 @@ class PPOAgent:
         input_folder = f"{HOME_DIR}/data/Sub20x20/"
         new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
         output_folder = f"{HOME_DIR}/results/Sub20x20v2"
+        output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
         num_grids = 10
 
         if not os.path.exists(new_folder):
@@ -100,13 +101,22 @@ class PPOAgent:
 
         grid_lines = [" ".join(str(val) for val in row) + "\n" for row in state]
         new_file_content = header_lines + grid_lines
-
+        print(new_file_content, asc_file)
         try:
             with open(asc_file, 'w') as f:
                 f.writelines(new_file_content)
         except Exception as e:
             return None
         
+        FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
+        nws = str(np.random.randint(1, 6))
+        ROS = str(np.round(np.random.uniform(0.0, 1.0), 2)),
+        IR = str(np.random.randint(1, 6)),
+        HF = str(np.round(np.random.uniform(0.5, 2.0), 2)),
+        FF = str(np.round(np.random.uniform(0.5, 2.0), 2)),
+        BF = str(np.round(np.random.uniform(0.5, 2.0), 2)),
+        EF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+
         try:
             cmd = [
                 f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
@@ -117,19 +127,43 @@ class PPOAgent:
                 "--nsims", str(num_grids),
                 "--grids", str(32),
                 "--final-grid",
-                "--Fire-Period-Length", str(np.round(np.random.uniform(0.5, 3.0), 2)),
+                "--Fire-Period-Length", FPL,
                 "--weather", "rows",
-                "--nweathers", str(np.random.randint(1, 6)),
+                "--nweathers", nws,
                 "--output-messages",
-                "--ROS-CV", str(np.round(np.random.uniform(0.0, 1.0), 2)),
+                "--ROS-CV", ROS,
                 "--seed", str(1),
-                "--IgnitionRad", str(np.random.randint(1, 6)),
-                "--HFactor", str(np.round(np.random.uniform(0.5, 2.0), 2)),
-                "--FFactor", str(np.round(np.random.uniform(0.5, 2.0), 2)),
-                "--BFactor", str(np.round(np.random.uniform(0.5, 2.0), 2)),
-                "--EFactor", str(np.round(np.random.uniform(0.5, 2.0), 2))
+                "--IgnitionRad", IR,
+                "--HFactor", HF,
+                "--FFactor", FF,
+                "--BFactor", BF,
+                "--EFactor", EF
+            ]
+
+            cmd_base = [
+                f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
+                "--input-instance-folder", input_folder,
+                "--output-folder", output_folder,
+                "--ignitions",
+                "--sim-years", str(1),
+                "--nsims", str(num_grids),
+                "--grids", str(32),
+                "--final-grid",
+                "--Fire-Period-Length", FPL,
+                "--weather", "rows",
+                "--nweathers", nws,
+                "--output-messages",
+                "--ROS-CV", ROS,
+                "--seed", str(1),
+                "--IgnitionRad", IR,
+                "--HFactor", HF,
+                "--FFactor", FF,
+                "--BFactor", BF,
+                "--EFactor", EF
             ]
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(cmd_base)
+
         except subprocess.CalledProcessError as e:
             return None
 

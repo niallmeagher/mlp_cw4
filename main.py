@@ -8,7 +8,7 @@ import csv
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
 
-HOME_DIR = '/home/s2750265/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
+HOME_DIR = '/home/s2686742/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
 dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
 
 def save_checkpoint(agent, epoch, checkpoint_dir=f"{HOME_DIR}/data/Sub20x20_Test/Checkpoints"):
