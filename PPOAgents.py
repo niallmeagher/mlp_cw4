@@ -68,48 +68,31 @@ class PPOAgent:
         else:
             self.reward_net = None
 
-    def modify_first_column_csv(self, file_path, topk_indices, new_value):
-    
-    # Read the CSV file.
-        with open(file_path, 'r', newline='') as f:
-            reader = csv.reader(f)
+    def modify_csv_first_column(self, input_filename, output_filename, indices_to_change, new_value):
+   
+    # Read all rows from the CSV file.
+        with open(input_filename, 'r', newline='') as infile:
+            reader = csv.reader(infile)
             rows = list(reader)
     
+    # If the file contains a header, we assume it's the first row.
         if not rows:
             print("The file is empty.")
             return
- 
-    # Assume the first row is the header.
+    
         header = rows[0]
-        num_cols = len(header)
+        data_rows = rows[1:]
     
-    # Get all data rows (exclude header) and filter out rows that are entirely empty.
-        data_rows = [row for row in rows[1:] if any(cell.strip() for cell in row)]
+    # Process each data row.
+    # We assume that indices_to_change refers to row numbers starting at 1 (first data row).
+        for idx, row in enumerate(data_rows, start=1):
+            if idx in indices_to_change:
+                # Change the string in the first column.
+                row[0] = new_value
     
-    # Ensure every data row has the same number of columns as the header.
-        for i, row in enumerate(data_rows):
-            if len(row) < num_cols:
-            # Pad the row with empty strings.
-                row.extend([''] * (num_cols - len(row)))
-            elif len(row) > num_cols:
-            # Trim any extra columns.
-                data_rows[i] = row[:num_cols]
-
-    # Debug: print the number of data rows and number of columns
-        print(f"Header has {num_cols} columns, and there are {len(data_rows)} data rows.")
-
-    # Modify the first column (fueltype) for rows with indices in topk_indices.
-        for idx in topk_indices:
-            if 0 <= idx < len(data_rows):
-             # Debug: show the value before modification.
-                print(f"Modifying row {idx}: '{data_rows[idx][0]}' -> '{new_value}'")
-                data_rows[idx][0] = new_value
-            else:
-                print(f"Index {idx} is out of range (data rows count: {len(data_rows)}).")
-    
-    # Write back the header and modified data rows.
-        with open(file_path, 'w', newline='') as f:
-            writer = csv.writer(f)
+    # Write the updated content to the output file.
+        with open(output_filename, 'w', newline='') as outfile:
+            writer = csv.writer(outfile)
             writer.writerow(header)
             writer.writerows(data_rows)
 
@@ -206,7 +189,7 @@ class PPOAgent:
         except Exception as e:
             return None
         
-        self.modify_first_column_csv(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
+        self.modify_csv_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
         self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, is_csv=False)
         
         
