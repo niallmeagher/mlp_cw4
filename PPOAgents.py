@@ -69,32 +69,46 @@ class PPOAgent:
             self.reward_net = None
 
     def modify_first_column_csv(self, file_path, topk_indices, new_value):
-   
-    # Read the entire CSV file into a list of rows.
+    
+    # Read the CSV file into a list of rows.
         with open(file_path, 'r', newline='') as f:
             reader = csv.reader(f)
             rows = list(reader)
-    
+
         if not rows:
             print("The file is empty.")
             return
 
-    # The first row is the header.
+    # Separate header and data rows.
         header = rows[0]
         data_rows = rows[1:]
     
-    # Modify the first column (index 0) of the selected rows.
+    # Debug: Print initial state of data_rows
+    # for i, row in enumerate(data_rows):
+    #     print(f"Row {i}: {row}")
+    
+    # Modify the first column for the specified rows.
         for idx in topk_indices:
             if 0 <= idx < len(data_rows):
-                data_rows[idx][0] = new_value
+                if data_rows[idx]:  # Ensure the row is not empty
+                # Print debug info about the row being modified
+                    print(f"Modifying row {idx} from '{data_rows[idx][0]}' to '{new_value}'")
+                    data_rows[idx][0] = new_value
+                else:
+                    print(f"Row {idx} is empty; skipping modification.")
             else:
-                print(f"Index {idx} is out of range for the data rows.")
+                print(f"Index {idx} is out of range for the data rows (total {len(data_rows)} rows).")
     
-    # Write the header and modified data rows back to the same file.
+    # Write the header and modified data rows back to the file.
         with open(file_path, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(header)
             writer.writerows(data_rows)
+        
+
+
+
+
     def modify_first_column(self, file_path, topk_integers, is_csv=True):
         with open(file_path, 'r') as f:
             lines = f.readlines()
