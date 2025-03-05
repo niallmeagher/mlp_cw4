@@ -70,7 +70,7 @@ class PPOAgent:
 
     def modify_first_column_csv(self, file_path, topk_indices, new_value):
     
-    # Read the entire CSV file into a list of rows.
+    # Read the CSV file.
         with open(file_path, 'r', newline='') as f:
             reader = csv.reader(f)
             rows = list(reader)
@@ -78,37 +78,40 @@ class PPOAgent:
         if not rows:
             print("The file is empty.")
             return
-
-    # The first row is the header.
+ 
+    # Assume the first row is the header.
         header = rows[0]
-        data_rows = rows[1:]
-        num_fields = len(header)
-     
-    # Ensure each data row has the same number of fields as the header.
-        for i, row in enumerate(data_rows):
-            if len(row) < num_fields:
-                row.extend([''] * (num_fields - len(row)))
-            elif len(row) > num_fields:
-                data_rows[i] = row[:num_fields]
+        num_cols = len(header)
     
+    # Get all data rows (exclude header) and filter out rows that are entirely empty.
+        data_rows = [row for row in rows[1:] if any(cell.strip() for cell in row)]
+    
+    # Ensure every data row has the same number of columns as the header.
+        for i, row in enumerate(data_rows):
+            if len(row) < num_cols:
+            # Pad the row with empty strings.
+                row.extend([''] * (num_cols - len(row)))
+            elif len(row) > num_cols:
+            # Trim any extra columns.
+                data_rows[i] = row[:num_cols]
+
+    # Debug: print the number of data rows and number of columns
+        print(f"Header has {num_cols} columns, and there are {len(data_rows)} data rows.")
+
     # Modify the first column (fueltype) for rows with indices in topk_indices.
         for idx in topk_indices:
             if 0 <= idx < len(data_rows):
-            # Debug print to check the change
+             # Debug: show the value before modification.
                 print(f"Modifying row {idx}: '{data_rows[idx][0]}' -> '{new_value}'")
                 data_rows[idx][0] = new_value
             else:
-                print(f"Index {idx} is out of range for data rows (total {len(data_rows)} rows).")
+                print(f"Index {idx} is out of range (data rows count: {len(data_rows)}).")
     
-    # Write the header and modified data rows back to the same file.
+    # Write back the header and modified data rows.
         with open(file_path, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(header)
             writer.writerows(data_rows)
-
-        
-
-
 
 
     def modify_first_column(self, file_path, topk_integers, is_csv=True):
