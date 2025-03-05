@@ -10,6 +10,7 @@ from ActorCriticNetworks import ActorCriticNetwork
 import subprocess
 import os
 import glob
+import difflib
 
 HOME_DIR = '/home/s2686742/Cell2Fire/'
 
@@ -108,13 +109,17 @@ class PPOAgent:
         except Exception as e:
             return None
         
+        diff = difflib.unified_diff(lines, new_file_content, 
+                            fromfile="Original File", tofile="Modified File", lineterm="")
+        print("\n".join(diff))
+
         FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
         nws = str(np.random.randint(1, 6))
-        ROS = str(np.round(np.random.uniform(0.0, 1.0), 2)),
-        IR = str(np.random.randint(1, 6)),
-        HF = str(np.round(np.random.uniform(0.5, 2.0), 2)),
-        FF = str(np.round(np.random.uniform(0.5, 2.0), 2)),
-        BF = str(np.round(np.random.uniform(0.5, 2.0), 2)),
+        ROS = str(np.round(np.random.uniform(0.0, 1.0), 2))
+        IR = str(np.random.randint(1, 6))
+        HF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+        FF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+        BF = str(np.round(np.random.uniform(0.5, 2.0), 2))
         EF = str(np.round(np.random.uniform(0.5, 2.0), 2))
 
         try:
@@ -143,7 +148,7 @@ class PPOAgent:
             cmd_base = [
                 f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
                 "--input-instance-folder", input_folder,
-                "--output-folder", output_folder,
+                "--output-folder", output_folder_base,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
