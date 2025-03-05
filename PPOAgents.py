@@ -178,7 +178,7 @@ class PPOAgent:
 
         except subprocess.CalledProcessError as e:
             return None
-
+        '''
         base_grids_folder = os.path.join(output_folder, "Grids")
         computed_values = []
         for i in range(1, num_grids + 1):
@@ -214,7 +214,44 @@ class PPOAgent:
 
         final_average = np.mean(computed_values)
         return final_average
+        '''
+        base_grids_folder = os.path.join(output_folder_base, "Grids")
+        firebreak_grids_folder = os.path.join(output_folder, "Grids")
+        computed_values = []
+        for i in range(1, num_grids + 1):
+            csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
+            csv_file_FB = os.path.join(firebreak_grids_folder, f"Grids{i}", "ForestGrid08.csv")
+            if not os.path.exists(csv_file_base):
+                continue
+            try:
+                data_base = np.loadtxt(csv_file_base, delimiter=',')
+                data_FB = np.loadtxt(csv_file_FB, delimiter=',')
+            except Exception as e:
+                continue
 
+            flat_data_base = data_base.flatten()
+            total_zeros_base = np.sum(flat_data_base == 0)
+            total_ones_base = np.sum(flat_data_base == 1)
+            total_base = total_zeros_base + total_ones_base
+
+            flat_data_FB = data_FB.flatten()
+            total_zeros_FB = np.sum(flat_data_FB == 0)
+            total_ones_FB = np.sum(flat_data_FB == 1)
+            total_FB = total_zeros_FB + total_ones_FB
+            difference = total_ones_FB - total_ones_base
+            if total_FB == 0:
+                continue
+
+            prop_ones_base = total_ones_base / total_base
+            
+            computed_values.append(difference)
+
+        if not computed_values:
+            return None
+
+        final_average = np.mean(computed_values)
+        print("FINAL", final_average)
+        return final_average
     def simulate_fire_episode(self, state, action_indices):
         """
         state: tensor of shape (B, 1, 20, 20)
