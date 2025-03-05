@@ -117,7 +117,7 @@ class PPOAgent:
 
         # Compute difference matrix (1 = different, 0 = same)
         difference_matrix = (original_array != new_array).astype(int)
-        print(difference_matrix)
+        print(difference_matrix, np.sum(difference_matrix))
 
 
         FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
