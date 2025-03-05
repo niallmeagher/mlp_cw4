@@ -102,7 +102,7 @@ class PPOAgent:
 
         grid_lines = [" ".join(str(val) for val in row) + "\n" for row in state]
         new_file_content = header_lines + grid_lines
-        print(new_file_content, asc_file)
+        #print(new_file_content, asc_file)
         try:
             with open(asc_file, 'w') as f:
                 f.writelines(new_file_content)
@@ -111,7 +111,14 @@ class PPOAgent:
         
         diff = difflib.unified_diff(lines, new_file_content, 
                             fromfile="Original File", tofile="Modified File", lineterm="")
-        print("\n".join(diff))
+        #print("\n".join(diff))
+        original_array = np.array([list(map(float, line.split())) for line in lines[num_header_lines:]])
+        new_array = np.array([list(map(float, line.split())) for line in grid_lines])
+
+        # Compute difference matrix (1 = different, 0 = same)
+        difference_matrix = (original_array != new_array).astype(int)
+        print(difference_matrix)
+
 
         FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
         nws = str(np.random.randint(1, 6))
