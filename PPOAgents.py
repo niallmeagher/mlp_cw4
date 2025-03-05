@@ -66,7 +66,7 @@ class PPOAgent:
             self.reward_optimizer = torch.optim.Adam(self.reward_net.parameters(), lr=lr)
         else:
             self.reward_net = None
-    def modify_first_column(file_path, topk_integers, is_csv=True):
+    def modify_first_column(self, file_path, topk_integers, is_csv=True):
         with open(file_path, 'r') as f:
             lines = f.readlines()
 
