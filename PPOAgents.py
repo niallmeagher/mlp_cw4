@@ -187,7 +187,7 @@ class PPOAgent:
         except Exception as e:
             return None
         
-        self.modify_first_column_csv(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices)
+        self.modify_first_column_csv(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
         self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, is_csv=False)
         
         
