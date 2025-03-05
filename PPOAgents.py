@@ -68,34 +68,22 @@ class PPOAgent:
         else:
             self.reward_net = None
 
-    def modify_csv_first_column(self, input_filename, output_filename, indices_to_change, new_value):
-   
-    # Read all rows from the CSV file.
-        with open(input_filename, 'r', newline='') as infile:
+    def modify_csv(self, filename, indices, new_value):
+    # Read the CSV file into a list of rows
+        with open(filename, 'r') as infile:
             reader = csv.reader(infile)
             rows = list(reader)
     
-    # If the file contains a header, we assume it's the first row.
-        if not rows:
-            print("The file is empty.")
-            return
+    # Iterate through each provided index (1-based) and update the first column
+        for index in indices:
+            row_idx = index - 1  # Convert to 0-based index
+            if 0 <= row_idx < len(rows):
+                rows[row_idx][0] = new_value
     
-        header = rows[0]
-        data_rows = rows[1:]
-    
-    # Process each data row.
-    # We assume that indices_to_change refers to row numbers starting at 1 (first data row).
-        for idx, row in enumerate(data_rows, start=1):
-            if idx in indices_to_change:
-                # Change the string in the first column.
-                row[0] = new_value
-    
-    # Write the updated content to the output file.
-        with open(output_filename, 'w', newline='') as outfile:
+    # Write the modified rows back to the CSV file
+        with open(filename, 'w', newline='') as outfile:
             writer = csv.writer(outfile)
-            writer.writerow(header)
-            writer.writerows(data_rows)
-
+            writer.writerows(rows)
 
     def modify_first_column(self, file_path, topk_integers, is_csv=True):
         with open(file_path, 'r') as f:
@@ -189,7 +177,7 @@ class PPOAgent:
         except Exception as e:
             return None
         
-        self.modify_csv_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
+        self.modify_csv(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
         self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, is_csv=False)
         
         
