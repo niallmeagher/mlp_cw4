@@ -64,6 +64,7 @@ class PPOAgent:
             self.reward_net = None
 
     def run_random_cell2fire_and_analyze(self, state, topk_indices):
+        print(topk_indices)
         
         input_folder = f"{HOME_DIR}/data/Sub20x20/"
         new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
@@ -109,9 +110,7 @@ class PPOAgent:
         except Exception as e:
             return None
         
-        diff = difflib.unified_diff(lines, new_file_content, 
-                            fromfile="Original File", tofile="Modified File", lineterm="")
-        #print("\n".join(diff))
+        
         original_array = np.array([list(map(float, line.split())) for line in lines[num_header_lines:]])
         new_array = np.array([list(map(float, line.split())) for line in grid_lines])
 
