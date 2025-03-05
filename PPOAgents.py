@@ -70,40 +70,42 @@ class PPOAgent:
 
     def modify_first_column_csv(self, file_path, topk_indices, new_value):
     
-    # Read the CSV file into a list of rows.
+    # Read the entire CSV file into a list of rows.
         with open(file_path, 'r', newline='') as f:
             reader = csv.reader(f)
             rows = list(reader)
-
+    
         if not rows:
             print("The file is empty.")
             return
 
-    # Separate header and data rows.
+    # The first row is the header.
         header = rows[0]
         data_rows = rows[1:]
+        num_fields = len(header)
+     
+    # Ensure each data row has the same number of fields as the header.
+        for i, row in enumerate(data_rows):
+            if len(row) < num_fields:
+                row.extend([''] * (num_fields - len(row)))
+            elif len(row) > num_fields:
+                data_rows[i] = row[:num_fields]
     
-    # Debug: Print initial state of data_rows
-    # for i, row in enumerate(data_rows):
-    #     print(f"Row {i}: {row}")
-    
-    # Modify the first column for the specified rows.
+    # Modify the first column (fueltype) for rows with indices in topk_indices.
         for idx in topk_indices:
             if 0 <= idx < len(data_rows):
-                if data_rows[idx]:  # Ensure the row is not empty
-                # Print debug info about the row being modified
-                    print(f"Modifying row {idx} from '{data_rows[idx][0]}' to '{new_value}'")
-                    data_rows[idx][0] = new_value
-                else:
-                    print(f"Row {idx} is empty; skipping modification.")
+            # Debug print to check the change
+                print(f"Modifying row {idx}: '{data_rows[idx][0]}' -> '{new_value}'")
+                data_rows[idx][0] = new_value
             else:
-                print(f"Index {idx} is out of range for the data rows (total {len(data_rows)} rows).")
+                print(f"Index {idx} is out of range for data rows (total {len(data_rows)} rows).")
     
-    # Write the header and modified data rows back to the file.
+    # Write the header and modified data rows back to the same file.
         with open(file_path, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(header)
             writer.writerows(data_rows)
+
         
 
 
