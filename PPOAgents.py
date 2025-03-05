@@ -42,6 +42,10 @@ class RewardFunction(nn.Module):
 
 
 class PPOAgent:
+    
+    
+    
+
     def __init__(self, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
                  value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=3, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -62,6 +66,44 @@ class PPOAgent:
             self.reward_optimizer = torch.optim.Adam(self.reward_net.parameters(), lr=lr)
         else:
             self.reward_net = None
+    def modify_first_column(file_path, topk_integers, is_csv=True):
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+
+        header = None
+        start_idx = 1 if is_csv else 0  # Skip header only for CSV files
+
+        if is_csv:
+            header = lines[0]  # Store the header
+
+    # Convert data to list of lists (split by whitespace or comma)
+        delimiter = ',' if is_csv else None  # CSV uses commas, .dat usually uses whitespace
+        data = [line.strip().split(delimiter) for line in lines[start_idx:]]
+
+    # Convert first column to a NumPy array for easy modification
+        first_col = np.array([float(row[0]) for row in data])
+
+    # Modify values based on indices
+        for idx in topk_integers:
+            if 0 <= idx < len(first_col):  # Ensure index is within bounds
+                first_col[idx] = first_col[idx] * 2  # Example: Modify by doubling the value
+
+    # Update first column in data
+        for i, row in enumerate(data):
+            row[0] = str(first_col[i])  # Convert modified values back to string
+
+    # Convert data back to text format
+        modified_lines = [",".join(row) + "\n" if is_csv else " ".join(row) + "\n" for row in data]
+
+    # Write back to the same file
+        with open(file_path, 'w') as f:
+            if is_csv:
+                f.write(header)  # Write header back for CSV
+            f.writelines(modified_lines)  # Write modified data
+     
+
+
+    
 
     def run_random_cell2fire_and_analyze(self, state, topk_indices):
         print(topk_indices)
@@ -109,6 +151,9 @@ class PPOAgent:
                 f.writelines(new_file_content)
         except Exception as e:
             return None
+        
+        self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, is_csv=True)
+        self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, is_csv=False)
         
         
         original_array = np.array([list(map(float, line.split())) for line in lines[num_header_lines:]])
