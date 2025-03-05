@@ -11,6 +11,7 @@ import subprocess
 import os
 import glob
 import difflib
+import csv
 
 HOME_DIR = '/home/s2686742/Cell2Fire/'
 
@@ -66,6 +67,34 @@ class PPOAgent:
             self.reward_optimizer = torch.optim.Adam(self.reward_net.parameters(), lr=lr)
         else:
             self.reward_net = None
+
+    def modify_first_column_csv(self, file_path, topk_indices, new_value):
+   
+    # Read the entire CSV file into a list of rows.
+        with open(file_path, 'r', newline='') as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+    
+        if not rows:
+            print("The file is empty.")
+            return
+
+    # The first row is the header.
+        header = rows[0]
+        data_rows = rows[1:]
+    
+    # Modify the first column (index 0) of the selected rows.
+        for idx in topk_indices:
+            if 0 <= idx < len(data_rows):
+                data_rows[idx][0] = new_value
+            else:
+                print(f"Index {idx} is out of range for the data rows.")
+    
+    # Write the header and modified data rows back to the same file.
+        with open(file_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(header)
+            writer.writerows(data_rows)
     def modify_first_column(self, file_path, topk_integers, is_csv=True):
         with open(file_path, 'r') as f:
             lines = f.readlines()
@@ -158,7 +187,7 @@ class PPOAgent:
         except Exception as e:
             return None
         
-        self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, is_csv=True)
+        self.modify_first_column_csv(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices)
         self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, is_csv=False)
         
         
