@@ -245,7 +245,7 @@ class PPOAgent:
             prop_ones_base = total_ones_base / total_base
             
             computed_values.append(difference)
-
+            print(total_ones_FB, total_ones_base)
         if not computed_values:
             return None
 
