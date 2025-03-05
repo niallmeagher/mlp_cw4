@@ -81,12 +81,18 @@ class PPOAgent:
         data = [line.strip().split(delimiter) for line in lines[start_idx:]]
 
     # Convert first column to a NumPy array for easy modification
-        first_col = np.array([float(row[0]) for row in data])
+        first_col = np.array([row[0] for row in data])
 
     # Modify values based on indices
-        for idx in topk_integers:
-            if 0 <= idx < len(first_col):  # Ensure index is within bounds
-                first_col[idx] = first_col[idx] * 2  # Example: Modify by doubling the value
+        if is_csv:
+            for idx in topk_integers:
+                if 0 <= idx < len(first_col):  # Ensure index is within bounds
+                    first_col[idx] = "NF"  # Example: Modify by doubling the value
+        else:
+            for idx in topk_integers:
+                if 0 <= idx < len(first_col):  # Ensure index is within bounds
+                    first_col[idx] = "nf"
+
 
     # Update first column in data
         for i, row in enumerate(data):
