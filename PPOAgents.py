@@ -178,7 +178,7 @@ class PPOAgent:
             return None
         
         self.modify_csv(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
-        self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, is_csv=False)
+        self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.dat", topk_indices, is_csv=False)
         
         
         original_array = np.array([list(map(float, line.split())) for line in lines[num_header_lines:]])
