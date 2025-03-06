@@ -322,7 +322,7 @@ class PPOAgent:
                 continue
 
             prop_ones_base = total_ones_base / total_base
-            penalty_value = -0.1
+            penalty_value = -0
             rows, cols = data_FB.shape
             penalty = 0
             for index in topk_indices:
