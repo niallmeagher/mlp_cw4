@@ -115,7 +115,8 @@ data_path=/home/${USER}
 
 # send over both mlp_cw4 and Cell2Fire folders
 
-rsync --archive --update --compress --progress ${data_path}/ ${SCRATCH_HOME}
+rsync --archive --update --compress --progress ${data_path}/mlp_cw4 ${SCRATCH_HOME}/mlp_cw4
+rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_HOME}/Cell2Fire
 
 
 # ==============================
@@ -128,13 +129,14 @@ rsync --archive --update --compress --progress ${data_path}/ ${SCRATCH_HOME}
 
 NumEpochs=$1 # eg 1000
 NumEpisodes=$2 # eg 3
-InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/$3 # eg Sub20x20
-OutputFileDirectory=${SCRATCH_HOME}/$4 # eg Sub20x20
+InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20$3 # eg Sub20x20
+OutputFileDirectory=${SCRATCH_HOME}/Cell2Fire/results/Sub20x20$4 # eg Sub20x20
 
 COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}""
 echo "Running provided command: ${COMMAND}"
 eval "${COMMAND}"
 echo "Command ran successfully!"
+
 
 
 # ======================================

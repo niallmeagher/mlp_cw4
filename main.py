@@ -39,17 +39,6 @@ def load_checkpoint(agent, checkpoint_path):
     return start_epoch
 
 
-def load_checkpoint(agent, checkpoint_path):
-    checkpoint = torch.load(checkpoint_path, map_location=agent.device)
-    agent.network.load_state_dict(checkpoint["model_state_dict"])
-    agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    if agent.learned_reward and "reward_net_state_dict" in checkpoint:
-        agent.reward_net.load_state_dict(checkpoint["reward_net_state_dict"])
-    start_epoch = checkpoint["epoch"]
-    print(f"Resuming training from epoch {start_epoch}")
-    return start_epoch
-
-
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
     """
     Clears folder1, randomly selects a CSV from folder2, copies it to folder1,

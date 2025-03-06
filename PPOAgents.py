@@ -321,6 +321,8 @@ class PPOAgent:
         state = state.to(self.device)
         if mask is not None:
             mask = mask.to(self.device)
+        if weather is not None:
+            weather = weather.to(self.device)
         
 
         dist, value = self.network(state, tabular=weather, mask=mask)
