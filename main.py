@@ -4,6 +4,7 @@ import torch
 import shutil
 import numpy as np
 import csv
+import argparse
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
@@ -11,7 +12,7 @@ from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is def
 HOME_DIR = '/home/s2686742/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
 dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
 
-def save_checkpoint(agent, epoch, checkpoint_dir=f"{HOME_DIR}/data/Sub20x20_Test/Checkpoints"):
+def save_checkpoint(agent, epoch, checkpoint_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
     checkpoint = {
@@ -134,13 +135,26 @@ def read_multi_channel_asc(files, header_lines=6):
         tensors.append(torch.tensor(grid_np))
     return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20, 20)
 
-def main(start_epoch=0, checkpoint_path=None):
+def main(args, start_epoch=0, checkpoint_path=None):
+    input_dir = args['input_dir'] # e.g Sub20x20
+    output_dir = args['output_dir']
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    output_file = open(f'{output_dir}/losses.csv','w')
+    output_file.write('epoch,reward\n')
+
     # Hyperparameters
-    num_epochs = 1000          # Number of PPO update cycles
-    episodes_per_epoch = 10    # Number of episodes (trajectories) to collect per update
+    num_epochs = int(args['num_epochs'])
+    episodes_per_epoch = int(args['episodes'])
 
     # Initialize PPO Agent (update input channels if needed)
+    new_folder=f'{input_dir}_Test/'
+    input_folder=f'{input_dir}/'
+    output_folder=f'{output_dir}'
     agent = PPOAgent(input_channels=4, learned_reward=False)
+    agent = PPOAgent(input_folder, new_folder, output_folder,
+                     input_channels=4, learned_reward=False)
     
     csv_file = "episode_results.csv"
     if not os.path.exists(csv_file):
@@ -154,10 +168,10 @@ def main(start_epoch=0, checkpoint_path=None):
         start_epoch = 0
 
     files = [
-        f"{HOME_DIR}data/Sub20x20/Forest.asc",
-        f"{HOME_DIR}data/Sub20x20/elevation.asc",
-        f"{HOME_DIR}data/Sub20x20/saz.asc",
-        f"{HOME_DIR}data/Sub20x20/slope.asc"
+        f"{input_dir}/data/Sub20x20/Forest.asc",
+        f"{input_dir}/data/Sub20x20/elevation.asc",
+        f"{input_dir}/data/Sub20x20/saz.asc",
+        f"{input_dir}/data/Sub20x20/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
     # Build a mask for valid actions from the first channel.
@@ -180,8 +194,14 @@ def main(start_epoch=0, checkpoint_path=None):
         epoch_values = []
             
         total_reward = 0.0
+        '''
         folder_sample_from = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers")
         folder_stored = os.path.join(f"{HOME_DIR}data/Sub20x20_Test/", "Weathers_Stored")
+        '''
+        folder_sample_from = os.path.join(input_dir, "Weathers")
+        folder_stored = os.path.join(input_dir, "Weathers_Stored")
+        if os.path.exists(folder_sample_from) and not os.path.exists(folder_stored):
+            os.rename(folder_sample_from, folder_stored)
         tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
         epoch_rewards = []
@@ -234,7 +254,7 @@ def main(start_epoch=0, checkpoint_path=None):
             for ep in range(episodes_per_epoch):
                 identifier = f"Epoch_{epoch+1}_Episode_{ep+1}"
                 writer.writerow([identifier, epoch_rewards[ep], epoch_values[ep]])
-        save_checkpoint(agent, epoch+1)
+        save_checkpoint(agent, epoch+1, checkpoint_dir = f"{input_dir}_Test/Checkpoints")
     
 
     final_path = "final_model.pt"
@@ -253,4 +273,11 @@ def main(start_epoch=0, checkpoint_path=None):
 
 if __name__ == '__main__':
     checkpoint_file = None  # Replace with your file path if needed.
-    main(start_epoch=0, checkpoint_path=checkpoint_file)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n','--num_epochs', help='Number of taining epochs to perform', required=True)
+    parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)
+    parser.add_argument('-i','--input_dir', help='Path to folder containing input data', required=True)
+    parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
+    args = vars(parser.parse_args())
+    main(args,start_epoch=0, checkpoint_path=checkpoint_file)
+    

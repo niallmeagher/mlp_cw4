@@ -14,7 +14,9 @@ import difflib
 import csv
 import concurrent.futures
 
-HOME_DIR = '/home/s2686742/Cell2Fire/'
+username = os.getenv('USER')
+HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
+
 
 class RewardFunction(nn.Module):
     def __init__(self, state_channels=1, state_size=20, num_actions=400):
@@ -45,7 +47,7 @@ class RewardFunction(nn.Module):
 
 class PPOAgent:
     
-    def __init__(self, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
+    def __init__(self, input_folder, new_folder, output_folder, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
                  value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=3, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
@@ -56,6 +58,9 @@ class PPOAgent:
         self.gamma = gamma
         self.update_epochs = update_epochs
         self.learned_reward = learned_reward
+        self.input_folder = input_folder
+        self.new_folder = new_folder
+        self.output_folder = output_folder
 
         # Add a GAE lambda hyperparameter (commonly around 0.95)
         self.gae_lambda = 0.95
@@ -142,21 +147,21 @@ class PPOAgent:
 
     def run_random_cell2fire_and_analyze(self, topk_indices, parallel = False, stochastic = True):
         
-        input_folder = f"{HOME_DIR}/data/Sub20x20/"
-        new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
-        output_folder = f"{HOME_DIR}/results/Sub20x20v2"
+        #input_folder = f"{HOME_DIR}/data/Sub20x20/"
+        #new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
+        #output_folder = f"{HOME_DIR}/results/Sub20x20v2"
         output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
         num_grids = 10
 
-        if not os.path.exists(new_folder):
+        if not os.path.exists(self.new_folder):
             try:
-                shutil.copytree(input_folder, new_folder)
+                shutil.copytree(self.input_folder, self.new_folder)
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
         
-        self.modify_csv(f"{HOME_DIR}/data/Sub20x20/Data.csv",f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
-        self.modify_first_column(f"{HOME_DIR}/data/Sub20x20/Data.dat",f"{HOME_DIR}/data/Sub20x20_Test/Data.dat", topk_indices, is_csv=False)
+        self.modify_csv(os.path.join(self.input_folder, "Data.csv"),os.path.join(self.new_folder, "Data.csv"), topk_indices, 'NF')
+        self.modify_first_column(os.path.join(self.input_folder, "Data.dat"),os.path.join(self.new_folder, "Data.dat"), topk_indices, is_csv=False)
         
         if stochastic == True:
             FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
@@ -183,8 +188,8 @@ class PPOAgent:
         try:
             cmd = [
                 f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
-                "--input-instance-folder", new_folder,
-                "--output-folder", output_folder,
+                "--input-instance-folder", self.new_folder,
+                "--output-folder", self.output_folder,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -205,7 +210,7 @@ class PPOAgent:
 
             cmd_base = [
                 f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
-                "--input-instance-folder", input_folder,
+                "--input-instance-folder", self.input_folder,
                 "--output-folder", output_folder_base,
                 "--ignitions",
                 "--sim-years", str(1),
@@ -237,7 +242,7 @@ class PPOAgent:
             return None
         
         base_grids_folder = os.path.join(output_folder_base, "Grids")
-        firebreak_grids_folder = os.path.join(output_folder, "Grids")
+        firebreak_grids_folder = os.path.join(self.output_folder, "Grids")
         computed_values = []
         for i in range(1, num_grids + 1):
             csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
@@ -264,7 +269,7 @@ class PPOAgent:
             prop_ones_FB = total_ones_FB/total_FB
             prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
             #difference = prop_FB - prop_base
-            difference = total_ones_FB - total_ones_base
+            difference = total_ones_base - total_ones_FB
             if total_FB == 0:
                 continue
 
@@ -293,7 +298,7 @@ class PPOAgent:
         action_indices: tensor containing 20 flat indices.
         """
        
-        header, grid = self.read_asc_file(f"{HOME_DIR}/data/Sub20x20/Forest.asc")
+        header, grid = self.read_asc_file(os.path.join(self.input_folder, "Forest.asc"))
         
         H, W = grid.shape  # Assuming 20x20 grid
         rows = action_indices // W
@@ -301,7 +306,7 @@ class PPOAgent:
 
         reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
         grid[rows, cols] = 101
-        self.write_asc_file(f"{HOME_DIR}/data/Sub20x20_Test/Forest.asc", header, grid)
+        self.write_asc_file(os.path.join(self.new_folder, "Forest.asc"), header, grid)
         return reward
 
     def select_action(self, state, weather=None, mask=None):
