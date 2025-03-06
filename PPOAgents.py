@@ -146,7 +146,7 @@ class PPOAgent:
 
     
 
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True):
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None):
         
         #input_folder = f"{HOME_DIR}/data/Sub20x20/"
         #new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
