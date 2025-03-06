@@ -136,7 +136,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     # Initialize PPO Agent (update input channels if needed)
     new_folder=f'{input_dir}_Test/'
     input_folder=f'{input_dir}/'
-    output_folder=f'{output_dir}'
+    output_folder=f'{output_dir}v2'
     output_folder_base=f'{output_dir}_base/'
     #agent = PPOAgent(input_channels=4, learned_reward=False)
     agent = PPOAgent(input_folder, new_folder, output_folder,output_folder_base,
@@ -154,10 +154,10 @@ def main(args, start_epoch=0, checkpoint_path=None):
         start_epoch = 0
 
     files = [
-        f"{input_dir}/data/Sub20x20/Forest.asc",
-        f"{input_dir}/data/Sub20x20/elevation.asc",
-        f"{input_dir}/data/Sub20x20/saz.asc",
-        f"{input_dir}/data/Sub20x20/slope.asc"
+        f"{input_dir}/Forest.asc",
+        f"{input_dir}/elevation.asc",
+        f"{input_dir}/saz.asc",
+        f"{input_dir}/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
     # Build a mask for valid actions from the first channel.
