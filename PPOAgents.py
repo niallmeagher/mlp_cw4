@@ -302,8 +302,8 @@ class PPOAgent:
         header, grid = self.read_asc_file(os.path.join(self.input_folder, "Forest.asc"))
         
         H, W = grid.shape  # Assuming 20x20 grid
-        rows = action_indices // W
-        cols = action_indices % W
+        rows = (action_indices // W).cpu().numpy()
+        cols = (action_indices % W).cpu().numpy()
 
         reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
         grid[rows, cols] = 101
