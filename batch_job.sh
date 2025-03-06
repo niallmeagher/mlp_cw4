@@ -115,8 +115,8 @@ data_path=/home/${USER}
 
 # send over both mlp_cw4 and Cell2Fire folders
 
-rsync --archive --update --compress --progress ${data_path}/mlp_cw4 ${SCRATCH_HOME}/mlp_cw4
-rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_HOME}/Cell2Fire
+rsync --archive --update --compress --progress ${data_path}/mlp_cw4 ${SCRATCH_HOME}
+rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_HOME}
 
 
 # ==============================

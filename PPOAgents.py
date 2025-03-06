@@ -188,7 +188,7 @@ class PPOAgent:
 
         try:
             cmd = [
-                f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
+                f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", self.new_folder,
                 "--output-folder", self.output_folder,
                 "--ignitions",
@@ -210,7 +210,7 @@ class PPOAgent:
             ]
 
             cmd_base = [
-                f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
+                f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", self.input_folder,
                 "--output-folder", self.output_folder_base,
                 "--ignitions",
