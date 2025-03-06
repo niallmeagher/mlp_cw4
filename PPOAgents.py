@@ -11,7 +11,10 @@ import subprocess
 import os
 import glob
 
-HOME_DIR = '/home/s2750265/Cell2Fire/'
+# Sets HOME_DIR based on student number
+# NOTE: this will only work on batch jobs now!!
+username = os.getenv('USER')
+HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
 
 class RewardFunction(nn.Module):
     def __init__(self, state_channels=1, state_size=20, num_actions=400):
@@ -41,8 +44,10 @@ class RewardFunction(nn.Module):
 
 
 class PPOAgent:
-    def __init__(self, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
-                 value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=3, learned_reward=False):
+    def __init__(self, input_folder, new_folder, output_folder,
+                 input_channels=1, num_actions=400, lr=3e-4, 
+                 clip_epsilon=0.2, value_loss_coef=0.5, entropy_coef=0.1, 
+                 gamma=0.99, update_epochs=4, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -52,6 +57,9 @@ class PPOAgent:
         self.gamma = gamma
         self.update_epochs = update_epochs
         self.learned_reward = learned_reward
+        self.input_folder = input_folder
+        self.new_folder = new_folder
+        self.output_folder = output_folder
 
         # Add a GAE lambda hyperparameter (commonly around 0.95)
         self.gae_lambda = 0.95
@@ -63,20 +71,19 @@ class PPOAgent:
             self.reward_net = None
 
     def run_random_cell2fire_and_analyze(self, state, topk_indices):
-        
-        input_folder = f"{HOME_DIR}/data/Sub20x20/"
-        new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
-        output_folder = f"{HOME_DIR}/results/Sub20x20v2"
+        # input_folder = f"{HOME_DIR}data/Sub20x20/"
+        # new_folder = f"{HOME_DIR}data/Sub20x20_Test/"
+        # output_folder = f"{HOME_DIR}results/Sub20x20v2"
         num_grids = 10
 
-        if not os.path.exists(new_folder):
+        if not os.path.exists(self.new_folder):
             try:
-                shutil.copytree(input_folder, new_folder)
+                shutil.copytree(self.input_folder, self.new_folder)
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
         
-        asc_file = os.path.join(new_folder, "Forest.asc")
+        asc_file = os.path.join(self.new_folder, "Forest.asc")
         try:
             with open(asc_file, 'r') as f:
                 lines = f.readlines()
@@ -109,9 +116,9 @@ class PPOAgent:
         
         try:
             cmd = [
-                f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
-                "--input-instance-folder", new_folder,
-                "--output-folder", output_folder,
+                f"{HOME_DIR}./Cell2Fire",
+                "--input-instance-folder", self.new_folder,
+                "--output-folder", self.output_folder,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -133,7 +140,10 @@ class PPOAgent:
         except subprocess.CalledProcessError as e:
             return None
 
-        base_grids_folder = os.path.join(output_folder, "Grids")
+        # --- NEW FUNCTIONALITY ADDED HERE ---
+        # Instead of processing a single CSV file in Grids6, loop through Grids1, Grids2, ..., GridsN
+        base_grids_folder = os.path.join(self.output_folder, "Grids")
+
         computed_values = []
         for i in range(1, num_grids + 1):
             csv_file = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")

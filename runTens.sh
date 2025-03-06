@@ -3,7 +3,7 @@
 # Define variables
 NumEpochs=1000
 NumEpisodes=3
-Dir="/home/s2750265/mlp_cw4/"
+Dir="/disk/scratch//mlp_cw4/"
 InputFileDirectory=""
 OutputFileDirectory=""
 
