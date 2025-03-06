@@ -214,7 +214,7 @@ class PPOAgent:
                 "--final-grid",
                 "--Fire-Period-Length", FPL,
                 "--weather", "rows",
-                "--nweathers", nws,
+                "--nweathers", 1,
                 "--output-messages",
                 "--ROS-CV", ROS,
                 "--seed", str(1),
