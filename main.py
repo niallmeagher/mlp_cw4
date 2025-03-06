@@ -38,21 +38,6 @@ def load_checkpoint(agent, checkpoint_path):
     print(f"Resuming training from epoch {start_epoch}")
     return start_epoch
 
-def save_checkpoint(agent, epoch, checkpoint_dir="/home/s2686742/Cell2Fire/data/Sub20x20_Test/Checkpoints"):
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
-    checkpoint = {
-        "epoch": epoch,
-        "model_state_dict": agent.network.state_dict(),
-        "optimizer_state_dict": agent.optimizer.state_dict(),
-        "learned_reward": agent.learned_reward
-    }
-    # Save the reward network if you're using one.
-    if agent.learned_reward and agent.reward_net is not None:
-        checkpoint["reward_net_state_dict"] = agent.reward_net.state_dict()
-    torch.save(checkpoint, checkpoint_path)
-    print(f"Checkpoint saved at {checkpoint_path}")
-
 
 def load_checkpoint(agent, checkpoint_path):
     checkpoint = torch.load(checkpoint_path, map_location=agent.device)
@@ -152,7 +137,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     new_folder=f'{input_dir}_Test/'
     input_folder=f'{input_dir}/'
     output_folder=f'{output_dir}'
-    agent = PPOAgent(input_channels=4, learned_reward=False)
+    #agent = PPOAgent(input_channels=4, learned_reward=False)
     agent = PPOAgent(input_folder, new_folder, output_folder,
                      input_channels=4, learned_reward=False)
     
