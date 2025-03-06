@@ -127,8 +127,8 @@ rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_
 # you execute `sbatch --array=1:100 ...` the jobs will get numbers 1 to 100
 # inclusive.
 
-NumEpochs=$1 # eg 1000
-NumEpisodes=$2 # eg 3
+NumEpochs=1000$1 # eg 1000
+NumEpisodes=10$2 # eg 3
 InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20$3 # eg Sub20x20
 OutputFileDirectory=${SCRATCH_HOME}/Cell2Fire/results/Sub20x20$4 # eg Sub20x20
 

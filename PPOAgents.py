@@ -48,7 +48,7 @@ class RewardFunction(nn.Module):
 class PPOAgent:
     
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
-                 value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=3, learned_reward=False):
+                 value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=4, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -146,7 +146,7 @@ class PPOAgent:
 
     
 
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = False, stochastic = True):
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True):
         
         #input_folder = f"{HOME_DIR}/data/Sub20x20/"
         #new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
@@ -277,6 +277,7 @@ class PPOAgent:
             prop_ones_base = total_ones_base / total_base
             penalty_value = -0
             rows, cols = data_FB.shape
+            '''
             penalty = -0.1
             for index in topk_indices:
                 r, c = index // cols, index % cols
@@ -284,6 +285,7 @@ class PPOAgent:
                 if np.all(neighbors == 0):  
                     penalty += penalty_value
             difference += penalty
+            '''
             computed_values.append(difference)
             print("DifferenceValue:", difference)
         if not computed_values:
@@ -396,7 +398,7 @@ class PPOAgent:
                 new_log_probs.append(dist_i.log_prob(actions[i]).sum())
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
-            delta_log = torch.clamp(new_log_probs - old_log_probs, -100, 100)
+            delta_log = torch.clamp(new_log_probs - old_log_probs, -10, 10)
             print("PROBS", new_log_probs, old_log_probs,new_log_probs -old_log_probs, torch.exp(new_log_probs -old_log_probs) )
             ratio = torch.exp(delta_log)
             surr1 = ratio * advantages
