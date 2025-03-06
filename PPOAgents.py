@@ -352,7 +352,7 @@ class PPOAgent:
 
         reward = self.run_random_cell2fire_and_analyze(state_clone, action_indices.cpu().numpy())
         grid[rows, cols] = 101  # Update selected cells
-        difference_matrix = (state_clone.view(20,20) != grid).astype(int)
+        difference_matrix = (state_clone.squeeze().cpu().numpy() != grid).astype(int)
         print("Difference:", np.sum(difference_matrix))
     
         self.write_asc_file(f"{HOME_DIR}/data/Sub20x20_Test/Forest.asc", header, grid)
