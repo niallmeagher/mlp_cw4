@@ -153,16 +153,17 @@ class PPOAgent:
         #output_folder = f"{HOME_DIR}/results/Sub20x20v2"
         #output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
         num_grids = 10
+        work_folder = work_folder or self.new_folder 
 
-        if not os.path.exists(self.new_folder):
+        if not os.path.exists(work_folder):
             try:
-                shutil.copytree(self.input_folder, self.new_folder)
+                shutil.copytree(self.input_folder, work_folder)
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
         
-        self.modify_csv(os.path.join(self.input_folder, "Data.csv"),os.path.join(self.new_folder, "Data.csv"), topk_indices, 'NF')
-        self.modify_first_column(os.path.join(self.input_folder, "Data.dat"),os.path.join(self.new_folder, "Data.dat"), topk_indices, is_csv=False)
+        self.modify_csv(os.path.join(self.input_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
+        self.modify_first_column(os.path.join(self.input_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
         
         if stochastic == True:
             FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
@@ -295,7 +296,7 @@ class PPOAgent:
         print("FINAL", final_average)
         return final_average
 
-    def simulate_fire_episode(self, action_indices):
+    def simulate_fire_episode(self, action_indices, work_folder=None):
         """
         state: tensor of shape (B, 1, 20, 20)
         action_indices: tensor containing 20 flat indices.
@@ -307,9 +308,13 @@ class PPOAgent:
         rows = (action_indices // W).cpu().numpy()
         cols = (action_indices % W).cpu().numpy()
 
-        reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
+        #reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
+        reward = self.run_random_cell2fire_and_analyze(action_indices,
+                                                            parallel=True,
+                                                            stochastic=True,
+                                                            work_folder=work_folder)
         grid[rows, cols] = 101
-        self.write_asc_file(os.path.join(self.new_folder, "Forest.asc"), header, grid)
+        self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
         return reward
 
     def select_action(self, state, weather=None, mask=None):
