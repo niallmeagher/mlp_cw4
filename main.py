@@ -197,7 +197,7 @@ def main(start_epoch=0, checkpoint_path=None):
             print("Value", value)
             
             # Simulate the fire episode to get the true reward.
-            true_reward = agent.simulate_fire_episode(state[:,0:1,:,:], action_indices)
+            true_reward = agent.simulate_fire_episode(action_indices)
             total_reward += true_reward
             epoch_rewards.append(float(true_reward))
             epoch_values.append(float(value.item()))
