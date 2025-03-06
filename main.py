@@ -250,8 +250,15 @@ def main(args, start_epoch=0, checkpoint_path=None):
                                    tensor_input.clone(), tabular_tensor, mask)
                    for _ in range(episodes_per_epoch)]
             results = [future.result() for future in futures]
+        rewards_list = [res['reward'].item() for res in results]
+        mean_reward = np.mean(rewards_list)
+        std_reward = np.std(rewards_list) + 1e-8
 
         for res in results:
+            normalized_reward = (res['reward'].item() - mean_reward) / std_reward
+            res['reward'] = torch.tensor([normalized_reward], dtype=torch.float32)
+            res['true_reward'] = torch.tensor([normalized_reward], dtype=torch.float32)
+            total_reward += normalized_reward
             trajectories['states'].append(res['state'])
             trajectories['actions'].append(res['action'])
             trajectories['log_probs'].append(res['log_prob'])

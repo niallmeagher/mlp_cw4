@@ -47,8 +47,8 @@ class RewardFunction(nn.Module):
 
 class PPOAgent:
     
-    def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
-                 value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=4, learned_reward=False):
+    def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.1,
+                 value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=5, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -383,6 +383,8 @@ class PPOAgent:
         actions = trajectories['actions'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
         rewards = trajectories['rewards'].to(self.device)
+        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-8)
+        trajectories['rewards'] = rewards
         dones = trajectories['dones'].to(self.device)
         old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
 
