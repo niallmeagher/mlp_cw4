@@ -137,8 +137,9 @@ def main(args, start_epoch=0, checkpoint_path=None):
     new_folder=f'{input_dir}_Test/'
     input_folder=f'{input_dir}/'
     output_folder=f'{output_dir}'
+    output_folder_base=f'{output_dir}_base/'
     #agent = PPOAgent(input_channels=4, learned_reward=False)
-    agent = PPOAgent(input_folder, new_folder, output_folder,
+    agent = PPOAgent(input_folder, new_folder, output_folder,output_folder_base,
                      input_channels=4, learned_reward=False)
     
     csv_file = "episode_results.csv"

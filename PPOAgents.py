@@ -47,7 +47,7 @@ class RewardFunction(nn.Module):
 
 class PPOAgent:
     
-    def __init__(self, input_folder, new_folder, output_folder, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
+    def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.2,
                  value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=3, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
@@ -61,6 +61,7 @@ class PPOAgent:
         self.input_folder = input_folder
         self.new_folder = new_folder
         self.output_folder = output_folder
+        self.output_folder_base = output_folder_base
 
         # Add a GAE lambda hyperparameter (commonly around 0.95)
         self.gae_lambda = 0.95
@@ -150,7 +151,7 @@ class PPOAgent:
         #input_folder = f"{HOME_DIR}/data/Sub20x20/"
         #new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
         #output_folder = f"{HOME_DIR}/results/Sub20x20v2"
-        output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
+        #output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
         num_grids = 10
 
         if not os.path.exists(self.new_folder):
@@ -211,7 +212,7 @@ class PPOAgent:
             cmd_base = [
                 f"{HOME_DIR}/cell2fire/Cell2FireC/./Cell2Fire",
                 "--input-instance-folder", self.input_folder,
-                "--output-folder", output_folder_base,
+                "--output-folder", self.output_folder_base,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -241,7 +242,7 @@ class PPOAgent:
         except subprocess.CalledProcessError as e:
             return None
         
-        base_grids_folder = os.path.join(output_folder_base, "Grids")
+        base_grids_folder = os.path.join(self.output_folder_base, "Grids")
         firebreak_grids_folder = os.path.join(self.output_folder, "Grids")
         computed_values = []
         for i in range(1, num_grids + 1):
