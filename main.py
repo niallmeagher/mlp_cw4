@@ -112,8 +112,8 @@ def read_multi_channel_asc(files, header_lines=6):
 def main(args, start_epoch=0, checkpoint_path=None):
     input_dir = args['input_dir'] # e.g Sub20x20
     output_dir = args['output_dir']
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    #if not os.path.exists(output_dir):
+       # os.makedirs(output_dir)
 
     output_file = open(f'{output_dir}/losses.csv','w')
     output_file.write('epoch,reward\n')
