@@ -278,9 +278,9 @@ def main(args, start_epoch=0, checkpoint_path=None):
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
         with open(csv_file, "a", newline="") as f:
             writer = csv.writer(f)
-            for ep in range(episodes_per_epoch):
+            for ep, (r, v) in enumerate(zip(epoch_rewards, epoch_values)):
                 identifier = f"Epoch_{epoch+1}_Episode_{ep+1}"
-                writer.writerow([identifier, epoch_rewards[ep], epoch_values[ep]])
+                writer.writerow([identifier, r, v])
         save_checkpoint(agent, epoch+1, checkpoint_dir = f"{input_dir}_Test/Checkpoints")
     
 
