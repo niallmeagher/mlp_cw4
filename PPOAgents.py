@@ -359,7 +359,7 @@ class PPOAgent:
         """
         T = rewards.shape[0]
         advantages = torch.zeros_like(rewards)
-        gae = 0.0
+        gae = torch.zeros(1, device=self.device)
         for t in reversed(range(T)):
             mask = 1 - dones[t]
             next_val = next_value if t == T - 1 else values[t + 1]
@@ -375,8 +375,8 @@ class PPOAgent:
         weather = trajectories['weather'].to(self.device)
         actions = trajectories['actions'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
-        rewards = trajectories['rewards']
-        dones = trajectories['dones']
+        rewards = trajectories['rewards'].to(self.device)
+        dones = trajectories['dones'].to(self.device)
         old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
 
         with torch.no_grad():
