@@ -5,6 +5,8 @@ import shutil
 import numpy as np
 import csv
 import argparse
+import tempfile
+from concurrent.futures import ThreadPoolExecutor as TPE
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
@@ -109,6 +111,28 @@ def read_multi_channel_asc(files, header_lines=6):
         tensors.append(torch.tensor(grid_np))
     return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20, 20)
 
+def simulate_single_episode(agent, state, tabular_tensor, mask):
+    # Create a temporary working directory for this episode
+    temp_dir = tempfile.mkdtemp(prefix="cell2fire_")
+    try:
+        action_indices, log_prob, value, _ = agent.select_action(state, tabular_tensor, mask)
+        true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_dir)
+    finally:
+        # Clean up the temporary folder after simulation
+        shutil.rmtree(temp_dir)
+    done = torch.tensor(1, dtype=torch.float32, device=agent.device)
+    return {
+        'state': state,
+        'action': action_indices,
+        'log_prob': log_prob,
+        'value': value,
+        'reward': torch.tensor([true_reward], dtype=torch.float32),
+        'done': done,
+        'weather': tabular_tensor,
+        'mask': mask,
+        'true_reward': torch.tensor([true_reward], dtype=torch.float32)
+    }
+
 def main(args, start_epoch=0, checkpoint_path=None):
     input_dir = args['input_dir'] # e.g Sub20x20
     output_dir = args['output_dir']
@@ -181,7 +205,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         tabular_tensor = tensor_data.view(1, 8, 11)
         epoch_rewards = []
         epoch_values = []
-        
+        '''
         for episode in range(episodes_per_epoch):
             
             state = tensor_input.clone()
@@ -210,7 +234,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
             trajectories['masks'].append(valid_actions_mask)
             trajectories['true_rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
            # print(valid_actions_mask.shape)
-          
+        
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'])  # shape (episodes, 20)
         trajectories['log_probs'] = torch.stack(trajectories['log_probs'])
@@ -220,6 +244,24 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
         trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
+        '''
+        with TPE(max_workers=episodes_per_epoch) as executor:
+            futures = [executor.submit(simulate_single_episode, agent,
+                                   tensor_input.clone(), tabular_tensor, mask)
+                   for _ in range(episodes_per_epoch)]
+            results = [future.result() for future in futures]
+
+        for res in results:
+            trajectories['states'].append(res['state'])
+            trajectories['actions'].append(res['action'])
+            trajectories['log_probs'].append(res['log_prob'])
+            trajectories['values'].append(res['value'])
+            trajectories['rewards'].append(res['reward'])
+            trajectories['dones'].append(res['done'])
+            trajectories['weather'].append(res['weather'])
+            trajectories['masks'].append(res['mask'])
+            trajectories['true_rewards'].append(res['true_reward'])
+            total_reward += res['reward'].item()
 
         agent.update(trajectories)
         avg_reward = total_reward / episodes_per_epoch
