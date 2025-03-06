@@ -364,6 +364,7 @@ class PPOAgent:
             advantages (Tensor): shape (T,)
             returns (Tensor): shape (T,)
         """
+        print(rewards)
         T = rewards.shape[0]
         advantages = torch.zeros_like(rewards)
         gae = torch.zeros(1, device=self.device)
