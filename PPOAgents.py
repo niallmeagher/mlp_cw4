@@ -194,14 +194,6 @@ class PPOAgent:
         self.modify_csv(f"{HOME_DIR}/data/Sub20x20/Data.csv",f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
         self.modify_first_column(f"{HOME_DIR}/data/Sub20x20/Data.dat",f"{HOME_DIR}/data/Sub20x20_Test/Data.dat", topk_indices, is_csv=False)
         
-        
-        #original_array = np.array([list(map(float, line.split())) for line in lines[num_header_lines:]])
-        #new_array = np.array([list(map(float, line.split())) for line in grid_lines])
-
-        # Compute difference matrix (1 = different, 0 = same)
-        #difference_matrix = (original_array != new_array).astype(int)
-        #print(difference_matrix, np.sum(difference_matrix))
-
 
         FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
         nws = str(np.random.randint(1, 6))
@@ -257,7 +249,7 @@ class PPOAgent:
                 "--EFactor", EF
             ]
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(cmd_base)
+            subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         except subprocess.CalledProcessError as e:
             return None
@@ -352,7 +344,7 @@ class PPOAgent:
 
         reward = self.run_random_cell2fire_and_analyze(state_clone, action_indices.cpu().numpy())
         grid[rows, cols] = 101  # Update selected cells
-        difference_matrix = (state_clone.squeeze().cpu().numpy() != grid).astype(int)
+        difference_matrix = (state.squeeze().cpu().numpy() != grid).astype(int)
         print("Difference:", np.sum(difference_matrix))
     
         self.write_asc_file(f"{HOME_DIR}/data/Sub20x20_Test/Forest.asc", header, grid)
