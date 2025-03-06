@@ -68,9 +68,21 @@ class PPOAgent:
         else:
             self.reward_net = None
 
-    def modify_csv(self, filename, indices, new_value):
+    def read_asc_file(self, filename):
+        with open(filename, 'r') as f:
+            header = [next(f) for _ in range(6)]  # Read first 6 lines as header
+            data = np.loadtxt(f, dtype=int)  # Load the 20x20 grid
+        return header, data
+
+    def write_asc_file(self, filename, header, data):
+        with open(filename, 'w') as f:
+            f.writelines(header)  # Write header back
+            np.savetxt(f, data, fmt='%d')  # Save modified grid
+
+
+    def modify_csv(self, filename_input,filename_output, indices, new_value):
     # Read the CSV file into a list of rows
-        with open(filename, 'r') as infile:
+        with open(filename_input, 'r') as infile:
             reader = csv.reader(infile)
             rows = list(reader)
     
@@ -81,12 +93,12 @@ class PPOAgent:
                 rows[row_idx][0] = new_value
     
     # Write the modified rows back to the CSV file
-        with open(filename, 'w', newline='') as outfile:
+        with open(filename_output, 'w', newline='') as outfile:
             writer = csv.writer(outfile)
             writer.writerows(rows)
 
-    def modify_first_column(self, file_path, topk_integers, is_csv=True):
-        with open(file_path, 'r') as f:
+    def modify_first_column(self, filename_input,filename_output, topk_integers, is_csv=True):
+        with open(filename_input, 'r') as f:
             lines = f.readlines()
 
         header = None
@@ -121,7 +133,7 @@ class PPOAgent:
         modified_lines = [",".join(row) + "\n" if is_csv else " ".join(row) + "\n" for row in data]
 
     # Write back to the same file
-        with open(file_path, 'w') as f:
+        with open(filename_output, 'w') as f:
             if is_csv:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
@@ -147,6 +159,7 @@ class PPOAgent:
                 return None
         
         asc_file = os.path.join(new_folder, "Forest.asc")
+        '''
         try:
             with open(asc_file, 'r') as f:
                 lines = f.readlines()
@@ -176,17 +189,18 @@ class PPOAgent:
                 f.writelines(new_file_content)
         except Exception as e:
             return None
+        '''
         
-        self.modify_csv(f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
-        self.modify_first_column(f"{HOME_DIR}/data/Sub20x20_Test/Data.dat", topk_indices, is_csv=False)
+        self.modify_csv(f"{HOME_DIR}/data/Sub20x20/Data.csv",f"{HOME_DIR}/data/Sub20x20_Test/Data.csv", topk_indices, 'NF')
+        self.modify_first_column(f"{HOME_DIR}/data/Sub20x20/Data.dat",f"{HOME_DIR}/data/Sub20x20_Test/Data.dat", topk_indices, is_csv=False)
         
         
-        original_array = np.array([list(map(float, line.split())) for line in lines[num_header_lines:]])
-        new_array = np.array([list(map(float, line.split())) for line in grid_lines])
+        #original_array = np.array([list(map(float, line.split())) for line in lines[num_header_lines:]])
+        #new_array = np.array([list(map(float, line.split())) for line in grid_lines])
 
         # Compute difference matrix (1 = different, 0 = same)
-        difference_matrix = (original_array != new_array).astype(int)
-        print(difference_matrix, np.sum(difference_matrix))
+        #difference_matrix = (original_array != new_array).astype(int)
+        #print(difference_matrix, np.sum(difference_matrix))
 
 
         FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
@@ -329,11 +343,19 @@ class PPOAgent:
         B, _, H, W = state.shape
         rows = action_indices // W
         cols = action_indices % W
+        header, grid = self.read_asc_file(f"{HOME_DIR}/data/Sub20x20/Forest.asc")
+        
+        H, W = grid.shape  # Assuming 20x20 grid
 
-        state = state.clone()
-        state[:, :, rows, cols] = 101
+        state_clone = state.clone()
+        state_clone[:, :, rows, cols] = 101
 
-        reward = self.run_random_cell2fire_and_analyze(state, action_indices.cpu().numpy())
+        reward = self.run_random_cell2fire_and_analyze(state_clone, action_indices.cpu().numpy())
+        grid[rows, cols] = 101  # Update selected cells
+        difference_matrix = (state_clone.view(20,20) != grid).astype(int)
+        print("Difference:", np.sum(difference_matrix))
+    
+        self.write_asc_file(f"{HOME_DIR}/data/Sub20x20_Test/Forest.asc", header, grid)
         return reward
 
     def select_action(self, state, weather=None, mask=None):
