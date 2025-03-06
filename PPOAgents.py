@@ -307,20 +307,32 @@ class PPOAgent:
             flat_data_base = data_base.flatten()
             total_zeros_base = np.sum(flat_data_base == 0)
             total_ones_base = np.sum(flat_data_base == 1)
-            total_base = total_zeros_base + total_ones_base
+            total_base = total_ones_base +total_zeros_base 
+            prop_ones_base = total_ones_base/total_base
+            prop_base = (1/(prop_ones_base+ 1e-8)) -1
 
             flat_data_FB = data_FB.flatten()
             total_zeros_FB = np.sum(flat_data_FB == 0)
             total_ones_FB = np.sum(flat_data_FB == 1)
-            total_FB = total_zeros_FB + total_ones_FB
-            difference = total_ones_base - total_ones_FB
+            total_FB = total_ones_FB + total_zeros_FB
+            prop_ones_FB = total_ones_FB/total_FB
+            prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
+            difference = prop_FB - prop_base
             if total_FB == 0:
                 continue
 
             prop_ones_base = total_ones_base / total_base
-            
+            penalty_value = -0.1
+            rows, cols = data_FB.shape
+            penalty = 0
+            for index in topk_indices:
+                r, c = index // cols, index % cols
+                neighbors = data_FB[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
+                if np.all(neighbors == 0):  
+                    penalty += penalty_value
+            difference += penalty
             computed_values.append(difference)
-            print(total_ones_FB, total_ones_base)
+            print("DifferenceValue:", difference)
         if not computed_values:
             return None
 
