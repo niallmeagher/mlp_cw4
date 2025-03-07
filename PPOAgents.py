@@ -158,14 +158,14 @@ class PPOAgent:
         
         output_folder_base = os.path.join(output_folder, "Base")
         os.makedirs(output_folder_base, exist_ok=True)
-        
+        '''
         if not os.path.exists(work_folder):
             try:
                 shutil.copytree(self.input_folder, work_folder)
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
-        
+        '''
         print("Running")
         
         
@@ -305,7 +305,6 @@ class PPOAgent:
 
         final_average = np.mean(computed_values)
         shutil.rmtree(output_folder)
-        shutil.rmtree(output_folder_base)
         print("FINAL", final_average)
         return final_average
 

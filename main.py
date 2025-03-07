@@ -122,7 +122,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}_")
     '''
     try:
-        shutil.copytree(src=input_folder, dst=temp_work_dir, dirs_exist_ok=True)
+        shutil.copytree(input_folder, temp_work_dir)
     except Exception as e:
         print("Error during copytree:", e)
         raise
