@@ -153,10 +153,11 @@ class PPOAgent:
         #new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
         #output_folder = f"{HOME_DIR}/results/Sub20x20v2"
         #output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
+        print("RUNS")
         num_grids = 10
         work_folder = work_folder or self.new_folder 
         output_folder = output_folder or self.output_folder 
-        output_folder_base = os.path.join(tempfile.mkdtemp(prefix="cell2fire_base_output_"), dir = output_folder)
+        output_folder_base = os.path.join(tempfile.mkdtemp(prefix="cell2fire_base_output_"), output_folder)
         os.makedirs(output_folder_base, exist_ok=True)
         
         if not os.path.exists(work_folder):
@@ -239,7 +240,7 @@ class PPOAgent:
             ]
             if parallel == False:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                subprocess.run(cmd_base)
+                subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     print("SUCCESS")
