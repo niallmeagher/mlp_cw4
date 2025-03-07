@@ -250,10 +250,13 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
         '''
+        print("EPISODES:", episodes_per_epoch)
         with TPE(max_workers=episodes_per_epoch) as executor:
+            print("Executing")
             futures = [executor.submit(simulate_single_episode, agent,
                                    tensor_input.clone(), tabular_tensor, mask, input_folder)
                    for _ in range(episodes_per_epoch)]
+            print("Done")
             results = [future.result() for future in futures]
 
         for res in results:
