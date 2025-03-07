@@ -160,7 +160,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     agent = PPOAgent(input_folder, new_folder, output_folder,output_folder_base,
                      input_channels=4, num_actions = 400, lr=learning_rate,
                      clip_epsilon=clip_epsilon, value_loss_coef=value_loss_coef,
-                     entropy_coef=entropy_coef, gamma=gamma, update_epochs,
+                     entropy_coef=entropy_coef, gamma=gamma, update_epochs=update_epochs,
                      learned_reward=False)
     
     csv_file = "episode_results.csv"

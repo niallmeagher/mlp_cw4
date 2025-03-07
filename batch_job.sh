@@ -132,7 +132,16 @@ NumEpisodes=$2 # eg 3
 InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20$3 # eg Sub20x20
 OutputFileDirectory=${SCRATCH_HOME}/Cell2Fire/results/Sub20x20$4 # eg Sub20x20
 
-COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}""
+learning_rate=3e-4
+clip_epsilon=0.2
+gamma=0.99
+update_epochs=4
+value_loss_coef=0.5
+entropy_coef=0.1
+
+COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}"\
+	-l ${learning_rate} -ce ${clip_epsilon} -g ${gamma} \
+	-u ${update_epochs} -v ${value_loss_coef} -ec ${entropy_coef}"
 echo "Running provided command: ${COMMAND}"
 eval "${COMMAND}"
 echo "Command ran successfully!"
