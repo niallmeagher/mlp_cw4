@@ -11,6 +11,7 @@ import subprocess
 import os
 import glob
 import difflib
+import uuid
 import csv
 import tempfile
 import concurrent.futures
@@ -147,22 +148,26 @@ class PPOAgent:
 
     
 
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None):
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None):
         
         print("RUNS")
         num_grids = 10
         work_folder = work_folder or self.new_folder 
-        output_folder = output_folder or self.output_folder 
-        output_folder_base = os.path.join(output_folder, "Base")
+        #output_folder = output_folder or self.output_folder 
+        #output_folder_base = os.path.join(output_folder, "Base")
+        sim_id = uuid.uuid4().hex
+        output_folder = os.path.join(self.output_folder, f"output_{sim_id}")
+        output_folder_base = os.path.join(self.output_folder_base, f"output_{sim_id}")
+        os.makedirs(output_folder, exist_ok=True)
         os.makedirs(output_folder_base, exist_ok=True)
-        '''
+        
         if not os.path.exists(work_folder):
             try:
                 shutil.copytree(self.input_folder, work_folder)
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
-        '''
+        
         print("Running")
         
         
@@ -302,6 +307,7 @@ class PPOAgent:
 
         final_average = np.mean(computed_values)
         shutil.rmtree(output_folder)
+        shutil.rmtree(output_folder_base)
         print("FINAL", final_average)
         return final_average
 
