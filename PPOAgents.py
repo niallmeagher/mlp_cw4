@@ -148,17 +148,15 @@ class PPOAgent:
 
     
 
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None):
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None):
         
         print("RUNS")
         num_grids = 10
         work_folder = work_folder or self.new_folder 
         #output_folder = output_folder or self.output_folder 
         #output_folder_base = os.path.join(output_folder, "Base")
-        sim_id = uuid.uuid4().hex
-        output_folder = os.path.join(self.output_folder, f"output_{sim_id}")
-        output_folder_base = os.path.join(self.output_folder_base, f"output_{sim_id}")
-        os.makedirs(output_folder, exist_ok=True)
+        
+        output_folder_base = os.path.join(output_folder, "Base")
         os.makedirs(output_folder_base, exist_ok=True)
         
         if not os.path.exists(work_folder):
