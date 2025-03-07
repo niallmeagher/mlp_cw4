@@ -197,7 +197,7 @@ class PPOAgent:
             cmd = [
                 f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", work_folder,
-                "--output-folder", output_folder,
+                "--output-folder", output_folder_base,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -219,7 +219,7 @@ class PPOAgent:
             cmd_base = [
                 f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", self.input_folder,
-                "--output-folder", output_folder_base,
+                "--output-folder", output_folder,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
