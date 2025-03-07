@@ -258,6 +258,10 @@ class PPOAgent:
         base_grids_folder = os.path.join(output_folder_base, "Grids")
         firebreak_grids_folder = os.path.join(output_folder, "Grids")
         computed_values = []
+        contents = os.listdir(firebreak_grids_folder)
+        print(contents)
+        contents2 = os.listdir(base_grids_folder)
+        print(contents2)
         for i in range(1, num_grids + 1):
             csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
             csv_file_FB = os.path.join(firebreak_grids_folder, f"Grids{i}", "ForestGrid08.csv")
