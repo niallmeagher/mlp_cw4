@@ -7,6 +7,7 @@ import csv
 import argparse
 import tempfile
 from concurrent.futures import ThreadPoolExecutor as TPE
+from concurrent.futures import ProcessPoolExecutor as PPE
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
@@ -255,7 +256,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
         '''
         print("EPISODES:", episodes_per_epoch)
-        with TPE(max_workers=episodes_per_epoch) as executor:
+        with PPE(max_workers=episodes_per_epoch) as executor:
             print("Executing")
             futures = [executor.submit(simulate_single_episode, agent,
                                    tensor_input.clone(), tabular_tensor, mask, input_folder)
