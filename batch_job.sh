@@ -128,7 +128,7 @@ rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_
 # inclusive.
 
 NumEpochs=1000$1 # eg 1000
-NumEpisodes=10$2 # eg 3
+NumEpisodes=5$2 # eg 3
 InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20$3 # eg Sub20x20
 OutputFileDirectory=${SCRATCH_HOME}/Cell2Fire/results/Sub20x20$4 # eg Sub20x20
 
