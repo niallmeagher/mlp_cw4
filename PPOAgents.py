@@ -156,7 +156,7 @@ class PPOAgent:
         num_grids = 10
         work_folder = work_folder or self.new_folder 
         output_folder = output_folder or self.output_folder 
-        output_folder_base = os.path.join(tempfile.mkdtemp(prefix="cell2fire_base_output_"))
+        output_folder_base = os.path.join(tempfile.mkdtemp(prefix="cell2fire_base_output_"), dir = output_folder)
         os.makedirs(output_folder_base, exist_ok=True)
         
         if not os.path.exists(work_folder):
@@ -165,6 +165,7 @@ class PPOAgent:
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
+        print("Running")
         
         
         self.modify_csv(os.path.join(work_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
@@ -238,12 +239,14 @@ class PPOAgent:
             ]
             if parallel == False:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print("SUCCESS")
                 subprocess.run(cmd_base)
             else:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
+                    print("SUCCESS")
                     future1 = executor.submit(run_command, cmd)
+                    print("SUCCESS1")
                     future2 = executor.submit(run_command, cmd_base)
+                    print("SUCCESS2")
                     concurrent.futures.wait([future1, future2])
 
         except subprocess.CalledProcessError as e:

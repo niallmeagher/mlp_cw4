@@ -116,9 +116,11 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     temp_work_dir = tempfile.mkdtemp(prefix="cell2fire_input_", dir = input_folder)
     temp_output_dir = tempfile.mkdtemp(prefix="cell2fire_output_", dir = input_folder)
     shutil.copytree(src= input_folder,dst=temp_work_dir,dirs_exist_ok=True)
+    print("initial")
     try:
         action_indices, log_prob, value, _ = agent.select_action(state, tabular_tensor, mask)
         true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_work_dir,output_folder=temp_output_dir)
+        print("Tried", action_indices, true_reward)
     finally:
         # Clean up the temporary folder after simulation
         shutil.rmtree(temp_work_dir)
