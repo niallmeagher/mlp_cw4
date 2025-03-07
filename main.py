@@ -8,6 +8,7 @@ import argparse
 import tempfile
 from concurrent.futures import ThreadPoolExecutor as TPE
 from concurrent.futures import ProcessPoolExecutor as PPE
+import multiprocessing as mp
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
@@ -312,6 +313,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     '''
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn', force=True)
     checkpoint_file = None  # Replace with your file path if needed.
     parser = argparse.ArgumentParser()
     parser.add_argument('-n','--num_epochs', help='Number of taining epochs to perform', required=True)

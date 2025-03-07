@@ -316,18 +316,20 @@ class PPOAgent:
         """
        
         header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
+        print("Opened")
         
         H, W = grid.shape  # Assuming 20x20 grid
         rows = (action_indices // W).cpu().numpy()
         cols = (action_indices % W).cpu().numpy()
 
         #reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
+        grid[rows, cols] = 101
+        self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
         reward = self.run_random_cell2fire_and_analyze(action_indices,
                                                             parallel=True,
                                                             stochastic=True,
                                                             work_folder=work_folder, output_folder = output_folder)
-        grid[rows, cols] = 101
-        self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
+        
         return reward
 
     def select_action(self, state, weather=None, mask=None):
