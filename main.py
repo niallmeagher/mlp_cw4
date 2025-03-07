@@ -5,6 +5,7 @@ import shutil
 import numpy as np
 import csv
 import argparse
+import uuid
 import tempfile
 from concurrent.futures import ThreadPoolExecutor as TPE
 from concurrent.futures import ProcessPoolExecutor as PPE
@@ -116,8 +117,9 @@ def read_multi_channel_asc(files, header_lines=6):
 def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
     print("initial")
-    temp_work_dir = tempfile.mkdtemp(prefix="cell2fire_input_", dir=os.path.dirname(input_folder))
-    temp_output_dir = tempfile.mkdtemp(prefix="cell2fire_output_", dir=os.path.dirname(input_folder))
+    episode_id = uuid.uuid4().hex
+    temp_work_dir = tempfile.mkdtemp(prefix="cell2fire_input_{episode_id}", dir=os.path.dirname(input_folder))
+    temp_output_dir = tempfile.mkdtemp(prefix="cell2fire_output_{episode_id}", dir=os.path.dirname(input_folder))
     try:
         shutil.copytree(src=input_folder, dst=temp_work_dir, dirs_exist_ok=True)
     except Exception as e:
@@ -257,7 +259,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
         '''
         print("EPISODES:", episodes_per_epoch)
-        with PPE(max_workers=episodes_per_epoch) as executor:
+        with TPE(max_workers=episodes_per_epoch) as executor:
             print("Executing")
             futures = [executor.submit(simulate_single_episode, agent,
                                    tensor_input.clone(), tabular_tensor, mask, input_folder)
