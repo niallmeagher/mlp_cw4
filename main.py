@@ -118,8 +118,8 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
     print("initial")
     episode_id = uuid.uuid4().hex
-    temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id}")
-    temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}_")
+    temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id}",dir=os.path.dirname(input_folder))
+    temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}_",dir=os.path.dirname(input_folder))
     
     try:
         shutil.copytree(input_folder, temp_work_dir, dirs_exist_ok = True)
@@ -134,7 +134,8 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         print("Tried", action_indices, true_reward)
     finally:
         # Clean up the temporary folder after simulation
-        shutil.rmtree(temp_work_dir)
+        shutil.rmtree(temp_work_dir, ignore_errors=True)
+        shutil.rmtree(temp_output_dir, ignore_errors=True)
     done = torch.tensor(1, dtype=torch.float32, device=agent.device)
     return {
         'state': state,
@@ -163,11 +164,11 @@ def main(args, start_epoch=0, checkpoint_path=None):
 
     # Initialize PPO Agent (update input channels if needed)
     new_folder=f'{input_dir}_Test/'
-    input_folder=f'{input_dir}/'
+    input_folder_final=f'{input_dir}/'
     output_folder=f'{output_dir}v2'
     output_folder_base=f'{output_dir}_base/'
     #agent = PPOAgent(input_channels=4, learned_reward=False)
-    agent = PPOAgent(input_folder, new_folder, output_folder,output_folder_base,
+    agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
                      input_channels=4, learned_reward=False)
     
     csv_file = "episode_results.csv"
@@ -264,7 +265,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         with TPE(max_workers=episodes_per_epoch) as executor:
             print("Executing")
             futures = [executor.submit(simulate_single_episode, agent,
-                                   tensor_input.clone(), tabular_tensor, mask, input_folder)
+                                   tensor_input.clone(), tabular_tensor, mask, input_folder_final)
                    for _ in range(episodes_per_epoch)]
             print("Done", futures)
             results = [future.result() for future in futures]

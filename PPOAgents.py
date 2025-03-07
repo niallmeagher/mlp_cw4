@@ -304,7 +304,7 @@ class PPOAgent:
             return None
 
         final_average = np.mean(computed_values)
-        shutil.rmtree(output_folder)
+        
         print("FINAL", final_average)
         return final_average
 
