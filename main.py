@@ -118,8 +118,9 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
     print("initial")
     episode_id = uuid.uuid4().hex
-    temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id}",dir=os.path.dirname(input_folder))
-    temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}_",dir=os.path.dirname(input_folder))
+    temp_parent_dir = "/tmp"
+    temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id}", dir = temp_parent_dir)
+    temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}_", dir = temp_parent_dir)
     
     try:
         shutil.copytree(input_folder, temp_work_dir, dirs_exist_ok = True)
