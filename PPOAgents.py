@@ -236,7 +236,8 @@ class PPOAgent:
             ]
             if parallel == False:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                print("SUCCESS")
+                subprocess.run(cmd_base)
             else:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future1 = executor.submit(run_command, cmd)
@@ -244,6 +245,7 @@ class PPOAgent:
                     concurrent.futures.wait([future1, future2])
 
         except subprocess.CalledProcessError as e:
+        
             return None
         
         base_grids_folder = os.path.join(output_folder_base, "Grids")
