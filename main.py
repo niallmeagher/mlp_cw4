@@ -111,15 +111,18 @@ def read_multi_channel_asc(files, header_lines=6):
         tensors.append(torch.tensor(grid_np))
     return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20, 20)
 
-def simulate_single_episode(agent, state, tabular_tensor, mask):
+def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
-    temp_dir = tempfile.mkdtemp(prefix="cell2fire_")
+    temp_work_dir = tempfile.mkdtemp(prefix="cell2fire_input_")
+    temp_output_dir = tempfile.mkdtemp(prefix="cell2fire_output_")
+    shutil.copytree(src= input_folder,dst=temp_work_dir,dirs_exist_ok=True)
     try:
         action_indices, log_prob, value, _ = agent.select_action(state, tabular_tensor, mask)
-        true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_dir)
+        true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_work_dir,output_folder=temp_output_dir)
     finally:
         # Clean up the temporary folder after simulation
-        shutil.rmtree(temp_dir)
+        shutil.rmtree(temp_work_dir)
+        shutil.rmtree(temp_output_dir)
     done = torch.tensor(1, dtype=torch.float32, device=agent.device)
     return {
         'state': state,
@@ -247,7 +250,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         '''
         with TPE(max_workers=episodes_per_epoch) as executor:
             futures = [executor.submit(simulate_single_episode, agent,
-                                   tensor_input.clone(), tabular_tensor, mask)
+                                   tensor_input.clone(), tabular_tensor, mask, input_folder)
                    for _ in range(episodes_per_epoch)]
             results = [future.result() for future in futures]
 

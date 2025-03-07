@@ -146,7 +146,7 @@ class PPOAgent:
 
     
 
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None):
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None):
         
         #input_folder = f"{HOME_DIR}/data/Sub20x20/"
         #new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
@@ -154,16 +154,19 @@ class PPOAgent:
         #output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
         num_grids = 10
         work_folder = work_folder or self.new_folder 
-
+        output_folder = output_folder or self.output_folder 
+        output_folder_base = os.path.join(output_folder, "Base")
+        '''
         if not os.path.exists(work_folder):
             try:
                 shutil.copytree(self.input_folder, work_folder)
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
+        '''
         
-        self.modify_csv(os.path.join(self.input_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
-        self.modify_first_column(os.path.join(self.input_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
+        self.modify_csv(os.path.join(work_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
+        self.modify_first_column(os.path.join(work_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
         
         if stochastic == True:
             FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
@@ -191,7 +194,7 @@ class PPOAgent:
             cmd = [
                 f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", work_folder,
-                "--output-folder", self.output_folder,
+                "--output-folder", output_folder,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -213,7 +216,7 @@ class PPOAgent:
             cmd_base = [
                 f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", self.input_folder,
-                "--output-folder", self.output_folder_base,
+                "--output-folder", output_folder_base,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -243,8 +246,8 @@ class PPOAgent:
         except subprocess.CalledProcessError as e:
             return None
         
-        base_grids_folder = os.path.join(self.output_folder_base, "Grids")
-        firebreak_grids_folder = os.path.join(self.output_folder, "Grids")
+        base_grids_folder = os.path.join(output_folder_base, "Grids")
+        firebreak_grids_folder = os.path.join(output_folder, "Grids")
         computed_values = []
         for i in range(1, num_grids + 1):
             csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
@@ -296,7 +299,7 @@ class PPOAgent:
         print("FINAL", final_average)
         return final_average
 
-    def simulate_fire_episode(self, action_indices, work_folder=None):
+    def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None):
         """
         state: tensor of shape (B, 1, 20, 20)
         action_indices: tensor containing 20 flat indices.
@@ -312,7 +315,7 @@ class PPOAgent:
         reward = self.run_random_cell2fire_and_analyze(action_indices,
                                                             parallel=True,
                                                             stochastic=True,
-                                                            work_folder=work_folder)
+                                                            work_folder=work_folder, output_folder = output_folder)
         grid[rows, cols] = 101
         self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
         return reward
