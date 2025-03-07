@@ -12,6 +12,7 @@ import os
 import glob
 import difflib
 import csv
+import tempfile
 import concurrent.futures
 
 username = os.getenv('USER')
@@ -155,15 +156,16 @@ class PPOAgent:
         num_grids = 10
         work_folder = work_folder or self.new_folder 
         output_folder = output_folder or self.output_folder 
-        output_folder_base = os.path.join(output_folder, "Base")
-        '''
+        output_folder_base = os.path.join(tempfile.mkdtemp(prefix="cell2fire_base_output_"))
+        os.makedirs(output_folder_base, exist_ok=True)
+        
         if not os.path.exists(work_folder):
             try:
                 shutil.copytree(self.input_folder, work_folder)
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
-        '''
+        
         
         self.modify_csv(os.path.join(work_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
         self.modify_first_column(os.path.join(work_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
@@ -298,6 +300,8 @@ class PPOAgent:
             return None
 
         final_average = np.mean(computed_values)
+        shutil.rmtree(output_folder)          # Firebreak output
+        shutil.rmtree(output_folder_base)
         print("FINAL", final_average)
         return final_average
 
@@ -307,7 +311,7 @@ class PPOAgent:
         action_indices: tensor containing 20 flat indices.
         """
        
-        header, grid = self.read_asc_file(os.path.join(self.input_folder, "Forest.asc"))
+        header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
         
         H, W = grid.shape  # Assuming 20x20 grid
         rows = (action_indices // W).cpu().numpy()
