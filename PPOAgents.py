@@ -251,6 +251,7 @@ class PPOAgent:
                     concurrent.futures.wait([future1, future2])
 
         except subprocess.CalledProcessError as e:
+            print("Exception raised")
         
             return None
         
