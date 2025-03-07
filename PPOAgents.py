@@ -313,6 +313,8 @@ class PPOAgent:
         state: tensor of shape (B, 1, 20, 20)
         action_indices: tensor containing 20 flat indices.
         """
+        contents = os.listdir(work_folder)
+        print(contents)
        
         header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
         print("Opened")
