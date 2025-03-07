@@ -148,7 +148,7 @@ class PPOAgent:
 
     
 
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None):
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None, output_folder_base = None):
         
         print("RUNS")
         num_grids = 10
@@ -156,8 +156,7 @@ class PPOAgent:
         #output_folder = output_folder or self.output_folder 
         #output_folder_base = os.path.join(output_folder, "Base")
         
-        output_folder_base = os.path.join(output_folder, "Base")
-        os.makedirs(output_folder_base, exist_ok=True)
+       
         '''
         if not os.path.exists(work_folder):
             try:
@@ -315,7 +314,7 @@ class PPOAgent:
         print("FINAL", final_average)
         return final_average
 
-    def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None):
+    def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
         """
         state: tensor of shape (B, 1, 20, 20)
         action_indices: tensor containing 20 flat indices.
@@ -336,7 +335,7 @@ class PPOAgent:
         reward = self.run_random_cell2fire_and_analyze(action_indices,
                                                             parallel=True,
                                                             stochastic=True,
-                                                            work_folder=work_folder, output_folder = output_folder)
+                                                            work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
         
         return reward
 
