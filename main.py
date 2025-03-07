@@ -113,6 +113,7 @@ def read_multi_channel_asc(files, header_lines=6):
 
 def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
+    print("initial")
     temp_work_dir = tempfile.mkdtemp(prefix="cell2fire_input_", dir=os.path.dirname(input_folder))
     temp_output_dir = tempfile.mkdtemp(prefix="cell2fire_output_", dir=os.path.dirname(input_folder))
     shutil.copytree(src= input_folder,dst=temp_work_dir,dirs_exist_ok=True)
@@ -256,7 +257,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
             futures = [executor.submit(simulate_single_episode, agent,
                                    tensor_input.clone(), tabular_tensor, mask, input_folder)
                    for _ in range(episodes_per_epoch)]
-            print("Done")
+            print("Done", futures)
             results = [future.result() for future in futures]
 
         for res in results:
