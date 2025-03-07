@@ -11,7 +11,7 @@ import subprocess
 import os
 import glob
 import difflib
-import uuid
+
 import csv
 import tempfile
 import concurrent.futures

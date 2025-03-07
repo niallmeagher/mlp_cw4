@@ -263,7 +263,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
         '''
         print("EPISODES:", episodes_per_epoch)
-        with TPE(max_workers=episodes_per_epoch) as executor:
+        with PPE(max_workers=episodes_per_epoch) as executor:
             print("Executing")
             futures = [executor.submit(simulate_single_episode, agent,
                                    tensor_input.clone(), tabular_tensor, mask, input_folder_final)
@@ -319,7 +319,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     '''
 
 if __name__ == '__main__':
-   # mp.set_start_method('spawn', force=True)
+    mp.set_start_method('spawn', force=True)
     checkpoint_file = None  # Replace with your file path if needed.
     parser = argparse.ArgumentParser()
     parser.add_argument('-n','--num_epochs', help='Number of taining epochs to perform', required=True)
