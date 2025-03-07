@@ -144,6 +144,12 @@ def main(args, start_epoch=0, checkpoint_path=None):
     # Hyperparameters
     num_epochs = int(args['num_epochs'])
     episodes_per_epoch = int(args['episodes'])
+    learning_rate = float(args['learning_rate'])
+    clip_epsilon = float(args['clip_epsilon'])
+    gamma = float(args['gamma'])
+    update_epochs = int(args['update_epochs'])
+    value_loss_coef = float(args['value_loss_coef'])
+    entropy_coef = float(args['entropy_coef'])
 
     # Initialize PPO Agent (update input channels if needed)
     new_folder=f'{input_dir}_Test/'
@@ -152,7 +158,10 @@ def main(args, start_epoch=0, checkpoint_path=None):
     output_folder_base=f'{output_dir}_base/'
     #agent = PPOAgent(input_channels=4, learned_reward=False)
     agent = PPOAgent(input_folder, new_folder, output_folder,output_folder_base,
-                     input_channels=4, learned_reward=False)
+                     input_channels=4, num_actions = 400, lr=learning_rate,
+                     clip_epsilon=clip_epsilon, value_loss_coef=value_loss_coef,
+                     entropy_coef=entropy_coef, gamma=gamma, update_epochs=update_epochs,
+                     learned_reward=False)
     
     csv_file = "episode_results.csv"
     if not os.path.exists(csv_file):
@@ -311,5 +320,11 @@ if __name__ == '__main__':
     parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
     parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
     parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
+    parser.add_argument('-l', '--learning_rate', help='Learning rate of PPO agent training', required=True)
+    parser.add_argument('-ce', '--clip_epsilon', help='Clip Epsilon for PPO agent', required=True)
+    parser.add_argument('-g', '--gamma', help='Discount factor for agent rewards', required=True)
+    parser.add_argument('-u', '--update_epochs', help='Number of update epochs per training step', required=True)
+    parser.add_argument('-v', '--value_loss_coef', help='coefficient for value loss in PPO', required=True)
+    parser.add_argument('-ec', '--entropy_coef', help='coefficient for entropy loss in PPO', required=True)
     args = vars(parser.parse_args())
     main(args)
