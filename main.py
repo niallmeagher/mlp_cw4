@@ -129,7 +129,6 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     finally:
         # Clean up the temporary folder after simulation
         shutil.rmtree(temp_work_dir)
-        shutil.rmtree(temp_output_dir)
     done = torch.tensor(1, dtype=torch.float32, device=agent.device)
     return {
         'state': state,

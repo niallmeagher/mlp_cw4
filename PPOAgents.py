@@ -159,13 +159,14 @@ class PPOAgent:
         output_folder = output_folder or self.output_folder 
         output_folder_base = os.path.join(tempfile.mkdtemp(prefix="cell2fire_base_output_"), output_folder)
         os.makedirs(output_folder_base, exist_ok=True)
-        
+        '''
         if not os.path.exists(work_folder):
             try:
                 shutil.copytree(self.input_folder, work_folder)
             except Exception as e:
                 print(f"Error copying folder: {e}")
                 return None
+        '''
         print("Running")
         
         
@@ -304,8 +305,7 @@ class PPOAgent:
             return None
 
         final_average = np.mean(computed_values)
-        shutil.rmtree(output_folder)          # Firebreak output
-        shutil.rmtree(output_folder_base)
+        shutil.rmtree(output_folder)
         print("FINAL", final_average)
         return final_average
 
