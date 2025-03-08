@@ -16,6 +16,8 @@ from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is def
 
 HOME_DIR = '/home/s2686742/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
 dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
+username = os.getenv('USER')
+HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
 
 def save_checkpoint(agent, epoch, checkpoint_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -119,7 +121,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     print("initial")
     episode_id = uuid.uuid4().hex
     
-    temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id}")
+    temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id}", dir = HOME_DIR)
     temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}_")
     temp_output_base_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_base_{episode_id}_")
     
