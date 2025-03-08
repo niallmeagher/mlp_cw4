@@ -170,7 +170,7 @@ class PPOAgent:
         
         self.modify_csv(os.path.join(work_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
         self.modify_first_column(os.path.join(work_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
-        temp_output = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}_", dir = "/tmp")
+        real_output = os.path.join(output_folder_base, "None")
         
         if stochastic == True:
             FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
@@ -198,7 +198,7 @@ class PPOAgent:
             cmd = [
                 f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", work_folder,
-                "--output-folder", temp_output,
+                "--output-folder", real_output,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -256,10 +256,10 @@ class PPOAgent:
             return None
         
         base_grids_folder = os.path.join(output_folder_base, "Grids")
-        print(os.listdir(temp_output),os.listdir(output_folder_base))
+        print(os.listdir(real_output),os.listdir(output_folder_base))
         contents2 = os.listdir(base_grids_folder)
         print(contents2)
-        firebreak_grids_folder = os.path.join(temp_output, "Grids")
+        firebreak_grids_folder = os.path.join(real_output, "Grids")
         computed_values = []
         contents = os.listdir(firebreak_grids_folder)
         print(contents)
