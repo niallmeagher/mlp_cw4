@@ -171,6 +171,7 @@ class PPOAgent:
         self.modify_csv(os.path.join(work_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
         self.modify_first_column(os.path.join(work_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
         real_output = os.path.join(output_folder_base, "None")
+        os.mkdir(real_output)
         
         if stochastic == True:
             FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
