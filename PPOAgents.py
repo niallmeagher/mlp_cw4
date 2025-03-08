@@ -197,7 +197,7 @@ class PPOAgent:
             cmd = [
                 f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", work_folder,
-                "--output-folder", output_folder_base,
+                "--output-folder", output_folder,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -219,7 +219,7 @@ class PPOAgent:
             cmd_base = [
                 f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", self.input_folder,
-                "--output-folder", output_folder,
+                "--output-folder", output_folder_base,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -312,6 +312,9 @@ class PPOAgent:
         final_average = np.mean(computed_values)
         
         print("FINAL", final_average)
+        shutil.rmtree(work_folder, ignore_errors=True)
+        shutil.rmtree(output_folder, ignore_errors=True)
+        shutil.rmtree(output_folder_base, ignore_errors=True)
         return final_average
 
     def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
