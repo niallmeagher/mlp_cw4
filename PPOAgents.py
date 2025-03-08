@@ -220,7 +220,7 @@ class PPOAgent:
 
             cmd_base = [
                 f"{HOME_DIR}./Cell2Fire",
-                "--input-instance-folder", work_folder,
+                "--input-instance-folder", self.input_folder,
                 "--output-folder", output_folder_base,
                 "--ignitions",
                 "--sim-years", str(1),
