@@ -288,7 +288,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         '''
         print("EPISODES:", episodes_per_epoch)
         start_time = time.time()
-        with TPE(max_workers=episodes_per_epoch) as executor:
+        with PPE(max_workers=mp.cpu_count()) as executor:
             print("Executing")
             futures = [executor.submit(simulate_single_episode, agent,
                                    tensor_input.clone(), tabular_tensor, mask, input_folder_final)
