@@ -65,14 +65,15 @@ class ActorCriticNetwork(nn.Module):
         actor_hidden = F.relu(self.actor_fc1(combined))
         actor_hidden = F.relu(self.actor_fc2(actor_hidden))
         actor_logits = self.actor_out(actor_hidden)  # (B, num_actions)
-        actor_logits = actor_logits/0.5
+        actor_logits = actor_logits
         if mask is not None:
             actor_logits = actor_logits.masked_fill(mask == 0, -1e10)
-        dist = Categorical(logits=actor_logits)
+        #dist = Categorical(logits=actor_logits)
 
         # Critic branch
         critic_hidden = F.relu(self.critic_fc1(combined))
         critic_hidden = F.relu(self.critic_fc2(critic_hidden))
         value = self.critic_out(critic_hidden)  # (B, 1)
 
-        return dist, value
+        #return dist, value
+        return actor_logits, value

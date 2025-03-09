@@ -6,12 +6,21 @@ import numpy as np
 import argparse
 import csv
 import argparse
+import time
+import uuid
 import tempfile
 from concurrent.futures import ThreadPoolExecutor as TPE
+from concurrent.futures import ProcessPoolExecutor as PPE
+import multiprocessing as mp
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
 
+#HOME_DIR = '/home/s2686742/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
+#dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
+username = os.getenv('USER')
+HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
+HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
 
 def save_checkpoint(agent, epoch, checkpoint_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -110,16 +119,47 @@ def read_multi_channel_asc(files, header_lines=6):
         tensors.append(torch.tensor(grid_np))
     return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20, 20)
 
-def simulate_single_episode(agent, state, tabular_tensor, mask):
+def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
-    temp_dir = tempfile.mkdtemp(prefix="cell2fire_")
+    print("initial")
+    episode_id = uuid.uuid4().hex
+    testing = "/tmp/"
+    #temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id} /", dir = HOME_DIR)
+    temp_work_dir = os.path.join(HOME_DIR,f"cell2fire_input_{episode_id}/" )
+    os.mkdir(temp_work_dir)
+    temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}", dir = HOME_DIR2)
+    temp_output_base_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_base_{episode_id}", dir = HOME_DIR2)
+    
+    
+    try:
+        shutil.copytree(input_folder, temp_work_dir, dirs_exist_ok = True)
+    except Exception as e:
+        print("Error during copytree:", e)
+        raise
+    
+    print("initial2")
     try:
         action_indices, log_prob, value, _ = agent.select_action(state, tabular_tensor, mask)
-        true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_dir)
+        true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_work_dir, output_folder = temp_output_dir, output_folder_base = temp_output_base_dir)
+        print("Tried", action_indices, true_reward)
+        if true_reward is None: # Check if reward is None
+            print("Warning: Reward is None from simulate_fire_episode. Episode failed.")
+            shutil.rmtree(temp_work_dir, ignore_errors=True) # Clean up work folder if episode failed
+            shutil.rmtree(temp_output_dir, ignore_errors=True)
+            shutil.rmtree(temp_output_base_dir, ignore_errors=True)
+            return None # Return None for the entire trajectory
+
     finally:
         # Clean up the temporary folder after simulation
-        shutil.rmtree(temp_dir)
+        shutil.rmtree(temp_work_dir, ignore_errors=True)
+        shutil.rmtree(temp_output_dir, ignore_errors=True)
+        shutil.rmtree(temp_output_base_dir, ignore_errors=True)
+        print("Finally")
+        if os.path.exists(temp_work_dir):
+           print(f"Warning: Work folder already exists before creation: {temp_work_dir}. This should not happen with UUIDs.")
+       # print("DELETED", os.listdir(temp_work_dir))
     done = torch.tensor(1, dtype=torch.float32, device=agent.device)
+    '''
     return {
         'state': state,
         'action': action_indices,
@@ -131,6 +171,19 @@ def simulate_single_episode(agent, state, tabular_tensor, mask):
         'mask': mask,
         'true_reward': torch.tensor([true_reward], dtype=torch.float32)
     }
+    '''
+    return {
+        'state': state.detach(),
+        'action': action_indices.detach(),
+        'log_prob': log_prob.detach(),
+        'value': value.detach(),
+        'reward': torch.tensor([true_reward], dtype=torch.float32),
+        'done': done,
+        'weather': tabular_tensor.detach(),
+        'mask': mask.detach(),
+        'true_reward': torch.tensor([true_reward], dtype=torch.float32)
+    }
+    
 
 def main(args, start_epoch=0, checkpoint_path=None):
     input_dir = args['input_dir'] # e.g Sub20x20
@@ -147,11 +200,11 @@ def main(args, start_epoch=0, checkpoint_path=None):
 
     # Initialize PPO Agent (update input channels if needed)
     new_folder=f'{input_dir}_Test/'
-    input_folder=f'{input_dir}/'
+    input_folder_final=f'{input_dir}/'
     output_folder=f'{output_dir}v2'
     output_folder_base=f'{output_dir}_base/'
     #agent = PPOAgent(input_channels=4, learned_reward=False)
-    agent = PPOAgent(input_folder, new_folder, output_folder,output_folder_base,
+    agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
                      input_channels=4, learned_reward=False)
     
     csv_file = "episode_results.csv"
@@ -242,13 +295,20 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
         '''
-        with TPE(max_workers=episodes_per_epoch) as executor:
+        print("EPISODES:", episodes_per_epoch)
+        start_time = time.time()
+        with TPE(max_workers=mp.cpu_count()) as executor:
+            print("Executing")
             futures = [executor.submit(simulate_single_episode, agent,
-                                   tensor_input.clone(), tabular_tensor, mask)
+                                   tensor_input.clone(), tabular_tensor, mask, input_folder_final)
                    for _ in range(episodes_per_epoch)]
+            print("Done", futures)
             results = [future.result() for future in futures]
-
+        nones = 0
         for res in results:
+            if res is None:
+                nones+=1
+                continue
             trajectories['states'].append(res['state'])
             trajectories['actions'].append(res['action'])
             trajectories['log_probs'].append(res['log_prob'])
@@ -271,7 +331,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
 
 
         agent.update(trajectories)
-        avg_reward = total_reward / episodes_per_epoch
+        avg_reward = total_reward / (episodes_per_epoch -nones )
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
 
         output_file.write(f"{epoch+1},{avg_reward:.4f}\n")
@@ -282,6 +342,9 @@ def main(args, start_epoch=0, checkpoint_path=None):
                 identifier = f"Epoch_{epoch+1}_Episode_{ep+1}"
                 writer.writerow([identifier, r, v])
         save_checkpoint(agent, epoch+1, checkpoint_dir = f"{input_dir}_Test/Checkpoints")
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time: {elapsed_time:.4f} seconds")
     
 
     final_path = "final_model.pt"
@@ -303,6 +366,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     
 
 if __name__ == '__main__':
+    #mp.set_start_method('spawn', force=True)
     checkpoint_file = None  # Replace with your file path if needed.
     parser = argparse.ArgumentParser()
     parser.add_argument('-n','--num_epochs', help='Number of taining epochs to perform', required=True)

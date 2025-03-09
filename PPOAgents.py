@@ -11,9 +11,15 @@ import subprocess
 import os
 import glob
 import difflib
+import uuid
 import csv
+import tempfile
 import concurrent.futures
-
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.cuda.amp import autocast, GradScaler
+from concurrent.futures import ProcessPoolExecutor as PPE
+from concurrent.futures import ThreadPoolExecutor as TPE
+import multiprocessing as mp
 username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
 
@@ -62,8 +68,11 @@ class PPOAgent:
         self.new_folder = new_folder
         self.output_folder = output_folder
         self.output_folder_base = output_folder_base
+        self.num_gpus = torch.cuda.device_count()
+        if self.num_gpus > 1:
+            self.network = nn.DataParallel(self.network)
+        self.network.to(self.device)
 
-        # Add a GAE lambda hyperparameter (commonly around 0.95)
         self.gae_lambda = 0.95
 
         if self.learned_reward:
@@ -74,29 +83,26 @@ class PPOAgent:
 
     def read_asc_file(self, filename):
         with open(filename, 'r') as f:
-            header = [next(f) for _ in range(6)]  # Read first 6 lines as header
-            data = np.loadtxt(f, dtype=int)  # Load the 20x20 grid
+            header = [next(f) for _ in range(6)]
+            data = np.loadtxt(f, dtype=int)
         return header, data
 
     def write_asc_file(self, filename, header, data):
         with open(filename, 'w') as f:
-            f.writelines(header)  # Write header back
-            np.savetxt(f, data, fmt='%d')  # Save modified grid
+            f.writelines(header)
+            np.savetxt(f, data, fmt='%d')
 
 
     def modify_csv(self, filename_input,filename_output, indices, new_value):
-    # Read the CSV file into a list of rows
         with open(filename_input, 'r') as infile:
             reader = csv.reader(infile)
             rows = list(reader)
-    
-    # Iterate through each provided index (1-based) and update the first column
+
         for index in indices:
-            row_idx = index - 1  # Convert to 0-based index
+            row_idx = index - 1
             if 0 <= row_idx < len(rows):
                 rows[row_idx][0] = new_value
     
-    # Write the modified rows back to the CSV file
         with open(filename_output, 'w', newline='') as outfile:
             writer = csv.writer(outfile)
             writer.writerows(rows)
@@ -106,16 +112,12 @@ class PPOAgent:
             lines = f.readlines()
 
         header = None
-        start_idx = 1 if is_csv else 0  # Skip header only for CSV files
-
+        start_idx = 1 if is_csv else 0
         if is_csv:
-            header = lines[0]  # Store the header
-
-    # Convert data to list of lists (split by whitespace or comma)
-        delimiter = ',' if is_csv else None  # CSV uses commas, .dat usually uses whitespace
+            header = lines[0]
+        delimiter = ',' if is_csv else None
         data = [line.strip().split(delimiter) for line in lines[start_idx:]]
 
-    # Convert first column to a NumPy array for easy modification
         first_col = np.array([row[0] for row in data])
 
     # Modify values based on indices
@@ -141,29 +143,14 @@ class PPOAgent:
             if is_csv:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
-     
 
-
-    
-
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None):
-        
-        #input_folder = f"{HOME_DIR}/data/Sub20x20/"
-        #new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
-        #output_folder = f"{HOME_DIR}/results/Sub20x20v2"
-        #output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None, output_folder_base = None):
         num_grids = 10
         work_folder = work_folder or self.new_folder 
-
-        if not os.path.exists(work_folder):
-            try:
-                shutil.copytree(self.input_folder, work_folder)
-            except Exception as e:
-                print(f"Error copying folder: {e}")
-                return None
         
-        self.modify_csv(os.path.join(self.input_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
-        self.modify_first_column(os.path.join(self.input_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
+        self.modify_csv(os.path.join(work_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
+        self.modify_first_column(os.path.join(work_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
+        
         
         if stochastic == True:
             FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
@@ -183,15 +170,20 @@ class PPOAgent:
             EF = str(1.2)
 
         def run_command(command):
-            return subprocess.run(command, check=True,
-                              stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL)
+            result = subprocess.run(command, check=False,  # Set check=False to avoid raising exception immediately
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True)
+            if result.returncode != 0:
+                print(f"Command failed: {command}")
+                print("Stdout:", result.stdout)
+                print("Stderr:", result.stderr)
+            return result
 
         try:
             cmd = [
                 f"{HOME_DIR}./Cell2Fire",
-                "--input-instance-folder", self.new_folder,
-                "--output-folder", self.output_folder,
+                "--input-instance-folder", work_folder,
+                "--output-folder", output_folder,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -213,7 +205,7 @@ class PPOAgent:
             cmd_base = [
                 f"{HOME_DIR}./Cell2Fire",
                 "--input-instance-folder", self.input_folder,
-                "--output-folder", self.output_folder_base,
+                "--output-folder", output_folder_base,
                 "--ignitions",
                 "--sim-years", str(1),
                 "--nsims", str(num_grids),
@@ -231,21 +223,33 @@ class PPOAgent:
                 "--BFactor", BF,
                 "--EFactor", EF
             ]
+            print(cmd, cmd_base)
             if parallel == False:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
-                with concurrent.futures.ThreadPoolExecutor() as executor:
+                with TPE(max_workers=mp.cpu_count()) as executor:
+                    print("SUCCESS")
                     future1 = executor.submit(run_command, cmd)
+                    print("SUCCESS1")
                     future2 = executor.submit(run_command, cmd_base)
+                    print("SUCCESS2")
                     concurrent.futures.wait([future1, future2])
 
         except subprocess.CalledProcessError as e:
+            print("Exception raised")
+        
             return None
         
-        base_grids_folder = os.path.join(self.output_folder_base, "Grids")
-        firebreak_grids_folder = os.path.join(self.output_folder, "Grids")
+        base_grids_folder = os.path.join(output_folder_base, "Grids")
+        print(os.listdir(output_folder),os.listdir(output_folder_base))
+        contents2 = os.listdir(base_grids_folder)
+        print(contents2)
+        firebreak_grids_folder = os.path.join(output_folder, "Grids")
         computed_values = []
+        contents = os.listdir(firebreak_grids_folder)
+        print(contents)
+        
         for i in range(1, num_grids + 1):
             csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
             csv_file_FB = os.path.join(firebreak_grids_folder, f"Grids{i}", "ForestGrid08.csv")
@@ -278,45 +282,51 @@ class PPOAgent:
             prop_ones_base = total_ones_base / total_base
             penalty_value = -0
             rows, cols = data_FB.shape
-            '''
-            penalty = -0.1
-            for index in topk_indices:
-                r, c = index // cols, index % cols
-                neighbors = data_FB[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
-                if np.all(neighbors == 0):  
-                    penalty += penalty_value
-            difference += penalty
-            '''
+            
+           # penalty = -0.1
+           # for index in topk_indices:
+          #      r, c = index // cols, index % cols
+          #      neighbors = data_FB[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
+           #     if np.all(neighbors == 0):  
+          #          penalty += penalty_value
+          #  difference += penalty
+            
             computed_values.append(difference)
             print("DifferenceValue:", difference)
         if not computed_values:
             return None
 
         final_average = np.mean(computed_values)
+        
         print("FINAL", final_average)
         return final_average
+    
 
-    def simulate_fire_episode(self, action_indices, work_folder=None):
+    def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
         """
         state: tensor of shape (B, 1, 20, 20)
         action_indices: tensor containing 20 flat indices.
         """
+        contents = os.listdir(work_folder)
+        print(contents)
        
-        header, grid = self.read_asc_file(os.path.join(self.input_folder, "Forest.asc"))
+        header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
+        print("Opened")
         
         H, W = grid.shape  # Assuming 20x20 grid
         rows = (action_indices // W).cpu().numpy()
         cols = (action_indices % W).cpu().numpy()
 
         #reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
+        grid[rows, cols] = 101
+        self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
         reward = self.run_random_cell2fire_and_analyze(action_indices,
                                                             parallel=True,
                                                             stochastic=True,
-                                                            work_folder=work_folder)
-        grid[rows, cols] = 101
-        self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
+                                                            work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
+        
         return reward
-
+    
     def select_action(self, state, weather=None, mask=None):
         """
         Returns:
@@ -330,9 +340,11 @@ class PPOAgent:
             mask = mask.to(self.device)
         if weather is not None:
             weather = weather.to(self.device)
-        
 
-        dist, value = self.network(state, tabular=weather, mask=mask)
+
+        actor_logits, value = self.network(state, tabular=weather, mask=mask)
+        dist = Categorical(logits=actor_logits)
+
         probs = F.softmax(dist.logits, dim=-1)
         probs = probs.reshape(20, 20)
         flat_logits = dist.logits.flatten()
@@ -396,13 +408,16 @@ class PPOAgent:
         print(advantages,returns)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         advantages = advantages.detach()
+        scaler = GradScaler()
 
         for _ in range(self.update_epochs):
-            dist, values = self.network(states, tabular=weather, mask=masks)
+            actor_logits, values = self.network(states, tabular=weather, mask=masks)
+            dist = Categorical(logits=actor_logits)
             new_log_probs = []
             for i in range(states.size(0)):
-                dist_i, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
+                dist_i_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
                                          mask=masks[i:i+1] if masks is not None else None)
+                dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
                 new_log_probs.append(dist_i.log_prob(actions[i]).sum())
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
@@ -418,11 +433,16 @@ class PPOAgent:
             loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
             print(policy_loss, self.value_loss_coef, value_loss, self.entropy_coef, entropy)
 
-            self.optimizer.zero_grad()
-            loss.backward()
+            #self.optimizer.zero_grad()
+            #loss.backward()
             # torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
-            self.optimizer.step()
-            print("LOSS", loss)
+            #self.optimizer.step()
+            #print("LOSS", loss)
+            self.optimizer.zero_grad()
+            scaler.scale(loss).backward()
+            torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
+            scaler.step(self.optimizer)
+            scaler.update()
 
         if self.learned_reward and 'true_rewards' in trajectories:
             predicted_rewards = self.reward_net(states.detach(), actions.detach()[:, 0])
