@@ -21,7 +21,7 @@ username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
 HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
 
-'''
+
 def save_checkpoint(agent, epoch, checkpoint_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
@@ -92,7 +92,7 @@ def load_checkpoint(agent, checkpoint_path):
     start_epoch = checkpoint["epoch"]
     print(f"Resuming training from epoch {start_epoch}")
     return start_epoch
-
+'''
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
     """
     Clears folder1, randomly selects a CSV from folder2, copies it to folder1,
