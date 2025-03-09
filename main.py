@@ -305,8 +305,11 @@ def main(args, start_epoch=0, checkpoint_path=None):
                    for _ in range(episodes_per_epoch)]
             print("Done", futures)
             results = [future.result() for future in futures]
-
+        nones = 0
         for res in results:
+            if res is None:
+                nones+=1
+                continue
             trajectories['states'].append(res['state'])
             trajectories['actions'].append(res['action'])
             trajectories['log_probs'].append(res['log_prob'])
@@ -329,7 +332,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
 
 
         agent.update(trajectories)
-        avg_reward = total_reward / episodes_per_epoch
+        avg_reward = total_reward / (episodes_per_epoch -nones )
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
         with open(csv_file, "a", newline="") as f:
             writer = csv.writer(f)
