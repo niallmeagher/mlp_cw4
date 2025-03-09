@@ -352,7 +352,7 @@ class PPOAgent:
                                                             work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
         
         return reward
-
+    '''
     def select_action(self, state, weather=None, mask=None):
         """
         Returns:
@@ -369,6 +369,31 @@ class PPOAgent:
         
 
         dist, value = self.network(state, tabular=weather, mask=mask)
+        probs = F.softmax(dist.logits, dim=-1)
+        probs = probs.reshape(20, 20)
+        flat_logits = dist.logits.flatten()
+        topk_values, topk_indices = torch.topk(flat_logits, k=20)
+        log_prob = dist.log_prob(topk_indices).sum()
+        return topk_indices, log_prob, value, probs
+        '''
+    def select_action(self, state, weather=None, mask=None):
+        """
+        Returns:
+            action_indices: tensor of shape (20,) containing the selected 20 indices.
+            log_prob: aggregated log probability for the 20 selected actions.
+            value: critic value for the state.
+            probs: reshaped probabilities grid (20 x 20) for reference.
+        """
+        state = state.to(self.device)
+        if mask is not None:
+            mask = mask.to(self.device)
+        if weather is not None:
+            weather = weather.to(self.device)
+
+
+        actor_logits, value = self.network(state, tabular=weather, mask=mask) # Get logits and value
+        dist = Categorical(logits=actor_logits) # Create Categorical distribution here
+
         probs = F.softmax(dist.logits, dim=-1)
         probs = probs.reshape(20, 20)
         flat_logits = dist.logits.flatten()
