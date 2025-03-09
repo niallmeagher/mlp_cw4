@@ -21,6 +21,7 @@ username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
 HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
 
+'''
 def save_checkpoint(agent, epoch, checkpoint_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
@@ -46,7 +47,51 @@ def load_checkpoint(agent, checkpoint_path):
     start_epoch = checkpoint["epoch"]
     print(f"Resuming training from epoch {start_epoch}")
     return start_epoch
+'''
+def save_checkpoint(agent, epoch, checkpoint_dir):
+    """Save training checkpoint with model state"""
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
+    
+    # Handle DataParallel wrapping when saving
+    model_state_dict = agent.network.module.state_dict() if isinstance(agent.network, nn.DataParallel) else agent.network.state_dict()
+    
+    checkpoint = {
+        "epoch": epoch,
+        "model_state_dict": model_state_dict,
+        "optimizer_state_dict": agent.optimizer.state_dict(),
+        "learned_reward": agent.learned_reward
+    }
+    
+    if agent.learned_reward and agent.reward_net is not None:
+        reward_state_dict = agent.reward_net.module.state_dict() if isinstance(agent.reward_net, nn.DataParallel) else agent.reward_net.state_dict()
+        checkpoint["reward_net_state_dict"] = reward_state_dict
+        
+    torch.save(checkpoint, checkpoint_path)
+    print(f"Checkpoint saved at {checkpoint_path}")
 
+
+def load_checkpoint(agent, checkpoint_path):
+    """Load training checkpoint"""
+    checkpoint = torch.load(checkpoint_path, map_location=agent.device)
+    
+    # Handle DataParallel wrapping when loading
+    if isinstance(agent.network, nn.DataParallel):
+        agent.network.module.load_state_dict(checkpoint["model_state_dict"])
+    else:
+        agent.network.load_state_dict(checkpoint["model_state_dict"])
+        
+    agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+    
+    if agent.learned_reward and "reward_net_state_dict" in checkpoint:
+        if isinstance(agent.reward_net, nn.DataParallel):
+            agent.reward_net.module.load_state_dict(checkpoint["reward_net_state_dict"])
+        else:
+            agent.reward_net.load_state_dict(checkpoint["reward_net_state_dict"])
+            
+    start_epoch = checkpoint["epoch"]
+    print(f"Resuming training from epoch {start_epoch}")
+    return start_epoch
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
     """
