@@ -185,7 +185,7 @@ def main(args):
             state = tensor_input.clone()
             valid_actions_mask = mask
             
-            action_indices, log_prob, value, state = agent.select_action(state, tabular_tensor, valid_actions_mask)
+            action_indices, log_prob, value, state, valid_actions_mask = agent.select_action(state, tabular_tensor, valid_actions_mask)
             
             print("Value", value)
             

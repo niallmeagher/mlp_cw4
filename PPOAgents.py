@@ -217,9 +217,10 @@ class PPOAgent:
             # Update state
             update_row, update_col = top_index // state.shape[3], top_index % state.shape[3]
             state[:,0,update_row, update_col] = 101
+            mask[top_index] = 0
 
         log_prob = dist.log_prob(topk_indices).sum()
-        return topk_indices, log_prob, value, state
+        return topk_indices, log_prob, value, state, mask
 
     def reward_function(self, state, action):
         if self.learned_reward:
