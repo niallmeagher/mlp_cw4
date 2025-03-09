@@ -16,8 +16,6 @@ import multiprocessing as mp
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
 
-#HOME_DIR = '/home/s2686742/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
-#dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
 username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
 HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
@@ -159,19 +157,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
            print(f"Warning: Work folder already exists before creation: {temp_work_dir}. This should not happen with UUIDs.")
        # print("DELETED", os.listdir(temp_work_dir))
     done = torch.tensor(1, dtype=torch.float32, device=agent.device)
-    '''
-    return {
-        'state': state,
-        'action': action_indices,
-        'log_prob': log_prob,
-        'value': value,
-        'reward': torch.tensor([true_reward], dtype=torch.float32),
-        'done': done,
-        'weather': tabular_tensor,
-        'mask': mask,
-        'true_reward': torch.tensor([true_reward], dtype=torch.float32)
-    }
-    '''
+    
     return {
         'state': state.detach(),
         'action': action_indices.detach(),
@@ -367,7 +353,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
 
 if __name__ == '__main__':
     #mp.set_start_method('spawn', force=True)
-    checkpoint_file = None  # Replace with your file path if needed.
+    checkpoint_file = None
     parser = argparse.ArgumentParser()
     parser.add_argument('-n','--num_epochs', help='Number of taining epochs to perform', required=True)
     parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)
