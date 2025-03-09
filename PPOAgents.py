@@ -204,8 +204,9 @@ class PPOAgent:
             probs: reshaped probabilities grid (20 x 20) for reference.
         """
         state = state.to(self.device)
-        if mask is not None:
-            mask = mask.to(self.device)
+        if mask is None:
+            mask = torch.ones(1,400)
+        mask = mask.to(self.device)
         
         topk_indices = []
         for _ in range(20):
