@@ -122,7 +122,9 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     print("initial")
     episode_id = uuid.uuid4().hex
     
-    temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id}", dir = HOME_DIR)
+    #temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id}", dir = HOME_DIR)
+    temp_work_dir = os.path.join(HOME_DIR,f"cell2fire_input_{episode_id}/" )
+    os.mkdir(temp_work_dir)
     temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}_", dir = HOME_DIR2)
     temp_output_base_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_base_{episode_id}_", dir = HOME_DIR2)
     
