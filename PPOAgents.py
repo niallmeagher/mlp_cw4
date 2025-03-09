@@ -249,7 +249,7 @@ class PPOAgent:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
-                with TPE() as executor:
+                with PPE() as executor:
                     print("SUCCESS")
                     future1 = executor.submit(run_command, cmd)
                     print("SUCCESS1")
