@@ -209,7 +209,7 @@ class PPOAgent:
             return result
 
         # Execute both commands in parallel using ThreadPoolExecutor (or ProcessPoolExecutor if Cell2Fire is CPU bound)
-        with TPE(max_workers=2) as executor: # Or PPE(max_workers=2) - Experiment with PPE for potentially better CPU utilization
+        with PPE(max_workers=2) as executor: # Or PPE(max_workers=2) - Experiment with PPE for potentially better CPU utilization
             future1 = executor.submit(run_command, cmd)
             future2 = executor.submit(run_command, cmd_base)
             concurrent.futures.wait([future1, future2]) 
