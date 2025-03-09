@@ -141,6 +141,13 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         action_indices, log_prob, value, _ = agent.select_action(state, tabular_tensor, mask)
         true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_work_dir, output_folder = temp_output_dir, output_folder_base = temp_output_base_dir)
         print("Tried", action_indices, true_reward)
+        if true_reward is None: # Check if reward is None
+            print("Warning: Reward is None from simulate_fire_episode. Episode failed.")
+            shutil.rmtree(temp_work_dir, ignore_errors=True) # Clean up work folder if episode failed
+            shutil.rmtree(temp_output_dir, ignore_errors=True)
+            shutil.rmtree(temp_output_base_dir, ignore_errors=True)
+            return None # Return None for the entire trajectory
+
     finally:
         # Clean up the temporary folder after simulation
         shutil.rmtree(temp_work_dir, ignore_errors=True)
