@@ -16,6 +16,7 @@ import csv
 import tempfile
 import concurrent.futures
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.cuda.amp import autocast, GradScaler
 from concurrent.futures import ProcessPoolExecutor as PPE
 from concurrent.futures import ThreadPoolExecutor as TPE
 username = os.getenv('USER')
@@ -69,6 +70,7 @@ class PPOAgent:
         self.num_gpus = torch.cuda.device_count()
         if self.num_gpus > 1:
             self.network = nn.DataParallel(self.network)
+        self.network.to(self.device)
 
         # Add a GAE lambda hyperparameter (commonly around 0.95)
         self.gae_lambda = 0.95
@@ -430,6 +432,7 @@ class PPOAgent:
         print(advantages,returns)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         advantages = advantages.detach()
+        scaler = GradScaler()
 
         for _ in range(self.update_epochs):
             dist, values = self.network(states, tabular=weather, mask=masks)
@@ -452,11 +455,15 @@ class PPOAgent:
             loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
             print(policy_loss, self.value_loss_coef, value_loss, self.entropy_coef, entropy)
 
-            self.optimizer.zero_grad()
-            loss.backward()
+            #self.optimizer.zero_grad()
+            #loss.backward()
             # torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
-            self.optimizer.step()
-            print("LOSS", loss)
+            #self.optimizer.step()
+            #print("LOSS", loss)
+            self.optimizer.zero_grad()
+            scaler.scale(loss).backward()
+            scaler.step(self.optimizer)
+            scaler.update()
 
         if self.learned_reward and 'true_rewards' in trajectories:
             predicted_rewards = self.reward_net(states.detach(), actions.detach()[:, 0])
