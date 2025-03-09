@@ -19,6 +19,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.cuda.amp import autocast, GradScaler
 from concurrent.futures import ProcessPoolExecutor as PPE
 from concurrent.futures import ThreadPoolExecutor as TPE
+import multiprocessing as mp
 username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
 
@@ -151,29 +152,182 @@ class PPOAgent:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
      
+    def _run_single_cell2fire_sim(self, work_folder, output_folder, output_folder_base, FPL, ROS, IR, HF, FF, BF, EF, num_grids): # Encapsulate single sim run
+        """Helper function to run a single Cell2Fire simulation."""
+        cmd = [
+            f"{HOME_DIR}./Cell2Fire",
+            "--input-instance-folder", work_folder,
+            "--output-folder", output_folder,
+            "--ignitions",
+            "--sim-years", str(1),
+            "--nsims", str(num_grids),
+            "--grids", str(32),
+            "--final-grid",
+            "--Fire-Period-Length", FPL,
+            "--weather", "rows",
+            "--nweathers", str(1),
+            "--output-messages",
+            "--ROS-CV", ROS,
+            "--seed", str(1),
+            "--IgnitionRad", IR,
+            "--HFactor", HF,
+            "--FFactor", FF,
+            "--BFactor", BF,
+            "--EFactor", EF
+        ]
 
+        cmd_base = [ # Base run for comparison needs to be part of the parallel execution too
+            f"{HOME_DIR}./Cell2Fire",
+            "--input-instance-folder", self.input_folder, # Use self.input_folder for base
+            "--output-folder", output_folder_base,
+            "--ignitions",
+            "--sim-years", str(1),
+            "--nsims", str(num_grids),
+            "--grids", str(32),
+            "--final-grid",
+            "--Fire-Period-Length", FPL,
+            "--weather", "rows",
+            "--nweathers", str(1),
+            "--output-messages",
+            "--ROS-CV", ROS,
+            "--seed", str(1),
+            "--IgnitionRad", IR,
+            "--HFactor", HF,
+            "--FFactor", FF,
+            "--BFactor", BF,
+            "--EFactor", EF
+        ]
+
+        def run_command(command): # Define inside for closure, or move outside if needed
+            result = subprocess.run(command, check=False,  # check=False to handle errors gracefully
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True)
+            if result.returncode != 0:
+                print(f"Command failed: {command}")
+                print("Stdout:", result.stdout)
+                print("Stderr:", result.stderr)
+            return result
+
+        # Execute both commands in parallel using ThreadPoolExecutor (or ProcessPoolExecutor if Cell2Fire is CPU bound)
+        with TPE(max_workers=2) as executor: # Or PPE(max_workers=2) - Experiment with PPE for potentially better CPU utilization
+            future1 = executor.submit(run_command, cmd)
+            future2 = executor.submit(run_command, cmd_base)
+            concurrent.futures.wait([future1, future2]) 
 
     
-
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None, output_folder_base = None):
-        
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel=True, stochastic=True, work_folder=None, output_folder=None, output_folder_base=None):
         print("RUNS")
-        num_grids = 10
-        work_folder = work_folder or self.new_folder 
-        #output_folder = output_folder or self.output_folder 
-        #output_folder_base = os.path.join(output_folder, "Base")
-        
-       
-        '''
-        if not os.path.exists(work_folder):
-            try:
-                shutil.copytree(self.input_folder, work_folder)
-            except Exception as e:
-                print(f"Error copying folder: {e}")
-                return None
-        '''
+        num_grids = 10 # Kept same
+        work_folder = work_folder or self.new_folder
+        output_folder = output_folder or self.output_folder # Ensure these are set if not passed
+        output_folder_base = output_folder_base or self.output_folder_base
+
         print("Running")
         episode_id = uuid.uuid4().hex
+
+        self.modify_csv(os.path.join(work_folder, "Data.csv"), os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
+        self.modify_first_column(os.path.join(work_folder, "Data.dat"), os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
+
+        if stochastic: # Parameter generation logic - same
+            FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
+            ROS = str(np.round(np.random.uniform(0.0, 1.0), 2))
+            IR = str(np.random.randint(1, 6))
+            HF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            FF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            BF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            EF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+        else: # Deterministic parameter logic - same
+            FPL = str(np.round(np.random.uniform(0.5, 3.0), 2)) # Still random FPL even deterministically, might need to fix if determinism wanted for all parameters
+            ROS = str(0.0)
+            IR = str(4)
+            HF = str(1.2)
+            FF = str(1.2)
+            BF = str(1.2)
+            EF = str(1.2)
+
+
+        try: # Call the helper function for simulation execution
+            if parallel == False:
+                self._run_single_cell2fire_sim(work_folder, output_folder, output_folder_base, FPL, ROS, IR, HF, FF, BF, EF, num_grids)
+            else: # Use ProcessPoolExecutor for multiple simulations - KEY CHANGE HERE
+                with PPE(max_workers=mp.cpu_count()) as executor: # Use ProcessPoolExecutor, adjust max_workers as needed (e.g., mp.cpu_count()-1)
+                    futures = []
+                    for _ in range(1): # Loop for number of parallel simulations - Currently 1, needs to be adjusted based on how many simulations needed per episode/update
+                         futures.append(executor.submit(self._run_single_cell2fire_sim, # Submit tasks to executor
+                                                        work_folder, output_folder, output_folder_base, FPL, ROS, IR, HF, FF, BF, EF, num_grids)) # Pass parameters for each sim
+                    concurrent.futures.wait(futures) # Wait for all simulations to complete
+
+
+        except subprocess.CalledProcessError as e:
+            print("Exception raised during subprocess call", e)
+            return None
+
+        base_grids_folder = os.path.join(output_folder_base, "Grids")
+        print(os.listdir(output_folder), os.listdir(output_folder_base))
+        contents2 = os.listdir(base_grids_folder)
+        print(contents2)
+        firebreak_grids_folder = os.path.join(output_folder, "Grids")
+        computed_values = []
+        contents = os.listdir(firebreak_grids_folder)
+        print(contents)
+
+        for i in range(1, num_grids + 1): # Analysis loop - remains the same
+            csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
+            csv_file_FB = os.path.join(firebreak_grids_folder, f"Grids{i}", "ForestGrid08.csv")
+            if not os.path.exists(csv_file_base):
+                continue
+            try:
+                data_base = np.loadtxt(csv_file_base, delimiter=',')
+                data_FB = np.loadtxt(csv_file_FB, delimiter=',')
+            except Exception as e:
+                continue
+
+            # ... (Reward calculation logic - remains same) ...
+            flat_data_base = data_base.flatten()
+            total_zeros_base = np.sum(flat_data_base == 0)
+            total_ones_base = np.sum(flat_data_base == 1)
+            total_base = total_ones_base +total_zeros_base
+            prop_ones_base = total_ones_base/total_base
+            prop_base = (1/(prop_ones_base+ 1e-8)) -1
+
+            flat_data_FB = data_FB.flatten()
+            total_zeros_FB = np.sum(flat_data_FB == 0)
+            total_ones_FB = np.sum(flat_data_FB == 1)
+            total_FB = total_ones_FB + total_zeros_FB
+            prop_ones_FB = total_ones_FB/total_FB
+            prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
+            #difference = prop_FB - prop_base
+            difference = total_ones_base - total_ones_FB
+            if total_FB == 0:
+                continue
+
+            prop_ones_base = total_ones_base / total_base
+            penalty_value = -0
+            rows, cols = data_FB.shape
+            '''
+            penalty = -0.1
+            for index in topk_indices:
+                r, c = index // cols, index % cols
+                neighbors = data_FB[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
+                if np.all(neighbors == 0):
+                    penalty += penalty_value
+            difference += penalty
+            '''
+            computed_values.append(difference)
+            print("DifferenceValue:", difference)
+        if not computed_values:
+            return None
+
+        final_average = np.mean(computed_values)
+
+        print("FINAL", final_average)
+        return final_average
+    
+    '''
+
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None, output_folder_base = None):
+        num_grids = 10
+        work_folder = work_folder or self.new_folder 
         
         self.modify_csv(os.path.join(work_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
         self.modify_first_column(os.path.join(work_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
@@ -309,15 +463,15 @@ class PPOAgent:
             prop_ones_base = total_ones_base / total_base
             penalty_value = -0
             rows, cols = data_FB.shape
-            '''
-            penalty = -0.1
-            for index in topk_indices:
-                r, c = index // cols, index % cols
-                neighbors = data_FB[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
-                if np.all(neighbors == 0):  
-                    penalty += penalty_value
-            difference += penalty
-            '''
+            
+           # penalty = -0.1
+           # for index in topk_indices:
+          #      r, c = index // cols, index % cols
+          #      neighbors = data_FB[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
+           #     if np.all(neighbors == 0):  
+          #          penalty += penalty_value
+          #  difference += penalty
+            
             computed_values.append(difference)
             print("DifferenceValue:", difference)
         if not computed_values:
@@ -327,6 +481,7 @@ class PPOAgent:
         
         print("FINAL", final_average)
         return final_average
+    '''
 
     def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
         """

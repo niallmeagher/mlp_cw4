@@ -121,7 +121,6 @@ def read_multi_channel_asc(files, header_lines=6):
 def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
     print("initial")
-    start_time = time.time()
     episode_id = uuid.uuid4().hex
     testing = "/tmp/"
     #temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id} /", dir = HOME_DIR)
@@ -129,9 +128,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     os.mkdir(temp_work_dir)
     temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}", dir = HOME_DIR2)
     temp_output_base_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_base_{episode_id}", dir = HOME_DIR2)
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"Elapsed time: {elapsed_time:.4f} seconds")
+    
     
     try:
         shutil.copytree(input_folder, temp_work_dir, dirs_exist_ok = True)
@@ -150,7 +147,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         shutil.rmtree(temp_output_dir, ignore_errors=True)
         shutil.rmtree(temp_output_base_dir, ignore_errors=True)
         print("Finally")
-        print("DELETED", os.listdir(temp_work_dir))
+       # print("DELETED", os.listdir(temp_work_dir))
     done = torch.tensor(1, dtype=torch.float32, device=agent.device)
     return {
         'state': state,
@@ -290,6 +287,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
         '''
         print("EPISODES:", episodes_per_epoch)
+        start_time = time.time()
         with TPE(max_workers=episodes_per_epoch) as executor:
             print("Executing")
             futures = [executor.submit(simulate_single_episode, agent,
@@ -329,6 +327,9 @@ def main(args, start_epoch=0, checkpoint_path=None):
                 identifier = f"Epoch_{epoch+1}_Episode_{ep+1}"
                 writer.writerow([identifier, r, v])
         save_checkpoint(agent, epoch+1, checkpoint_dir = f"{input_dir}_Test/Checkpoints")
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time: {elapsed_time:.4f} seconds")
     
 
     final_path = "final_model.pt"
