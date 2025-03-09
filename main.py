@@ -147,6 +147,8 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         shutil.rmtree(temp_output_dir, ignore_errors=True)
         shutil.rmtree(temp_output_base_dir, ignore_errors=True)
         print("Finally")
+        if os.path.exists(temp_work_dir):
+           print(f"Warning: Work folder already exists before creation: {temp_work_dir}. This should not happen with UUIDs.")
        # print("DELETED", os.listdir(temp_work_dir))
     done = torch.tensor(1, dtype=torch.float32, device=agent.device)
     '''
@@ -348,7 +350,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     '''
 
 if __name__ == '__main__':
-    mp.set_start_method('spawn', force=True)
+    #mp.set_start_method('spawn', force=True)
     checkpoint_file = None  # Replace with your file path if needed.
     parser = argparse.ArgumentParser()
     parser.add_argument('-n','--num_epochs', help='Number of taining epochs to perform', required=True)
