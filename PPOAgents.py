@@ -460,11 +460,14 @@ class PPOAgent:
         scaler = GradScaler()
 
         for _ in range(self.update_epochs):
-            dist, values = self.network(states, tabular=weather, mask=masks)
+            actor_logits, values = self.network(states, tabular=weather, mask=masks)
+            dist = Categorical(logits=actor_logits)
             new_log_probs = []
             for i in range(states.size(0)):
-                dist_i, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
+                dist_i_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
                                          mask=masks[i:i+1] if masks is not None else None)
+                dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
+                new_log_probs.append(dist_i.log_prob(actions[i]).sum())
                 new_log_probs.append(dist_i.log_prob(actions[i]).sum())
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
