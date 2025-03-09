@@ -334,7 +334,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
 
 
         agent.update(trajectories)
-        avg_reward = (trajectories['rewards'].sum()) / (episodes_per_epoch -nones )
+        avg_reward = (total_reward) / (episodes_per_epoch -nones )
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
         with open(csv_file, "a", newline="") as f:
             writer = csv.writer(f)
