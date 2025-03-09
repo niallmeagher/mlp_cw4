@@ -150,6 +150,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         shutil.rmtree(temp_output_dir, ignore_errors=True)
         shutil.rmtree(temp_output_base_dir, ignore_errors=True)
         print("Finally")
+        print("DELETED", os.listdir(temp_work_dir))
     done = torch.tensor(1, dtype=torch.float32, device=agent.device)
     return {
         'state': state,
