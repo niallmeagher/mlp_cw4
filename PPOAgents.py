@@ -16,6 +16,7 @@ import csv
 import tempfile
 import concurrent.futures
 from concurrent.futures import ProcessPoolExecutor as PPE
+from concurrent.futures import ThreadPoolExecutor as TPE
 username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
 
@@ -249,7 +250,7 @@ class PPOAgent:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
-                with PPE() as executor:
+                with TPE() as executor:
                     print("SUCCESS")
                     future1 = executor.submit(run_command, cmd)
                     print("SUCCESS1")
@@ -320,9 +321,6 @@ class PPOAgent:
         final_average = np.mean(computed_values)
         
         print("FINAL", final_average)
-        shutil.rmtree(work_folder, ignore_errors=True)
-        shutil.rmtree(output_folder, ignore_errors=True)
-        shutil.rmtree(output_folder_base, ignore_errors=True)
         return final_average
 
     def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
