@@ -124,10 +124,10 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     episode_id = uuid.uuid4().hex
     testing = "/tmp/"
     #temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id} /", dir = HOME_DIR)
-    temp_work_dir = os.path.join(testing,f"cell2fire_input_{episode_id}/" )
+    temp_work_dir = os.path.join(HOME_DIR,f"cell2fire_input_{episode_id}/" )
     os.mkdir(temp_work_dir)
-    temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}", dir = testing)
-    temp_output_base_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_base_{episode_id}", dir = testing)
+    temp_output_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_{episode_id}", dir = HOME_DIR2)
+    temp_output_base_dir = tempfile.mkdtemp(prefix=f"cell2fire_output_base_{episode_id}", dir = HOME_DIR2)
     
     
     try:
@@ -192,10 +192,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
 
     # Initialize PPO Agent (update input channels if needed)
     new_folder=f'{input_dir}_Test/'
-    input_folder3=f'{input_dir}/'
+    input_folder_final=f'{input_dir}/'
     input_folder_final = os.path.join("/tmp",f"cell2fire_input_final/" )
-    os.mkdir(input_folder_final)
-    shutil.copytree(input_folder3, input_folder_final, dirs_exist_ok = True)
     output_folder=f'{output_dir}v2'
     output_folder_base=f'{output_dir}_base/'
     #agent = PPOAgent(input_channels=4, learned_reward=False)
@@ -294,7 +292,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         '''
         print("EPISODES:", episodes_per_epoch)
         start_time = time.time()
-        with TPE(max_workers=episodes_per_epoch) as executor:
+        with TPE(max_workers=mp.cpu_count()) as executor:
             print("Executing")
             futures = [executor.submit(simulate_single_episode, agent,
                                    tensor_input.clone(), tabular_tensor, mask, input_folder_final)
