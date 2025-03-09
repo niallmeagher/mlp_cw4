@@ -151,6 +151,7 @@ class PPOAgent:
             if is_csv:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
+    '''
      
     def _run_single_cell2fire_sim(self, work_folder, output_folder, output_folder_base, FPL, ROS, IR, HF, FF, BF, EF, num_grids): # Encapsulate single sim run
         """Helper function to run a single Cell2Fire simulation."""
@@ -209,7 +210,7 @@ class PPOAgent:
             return result
 
         # Execute both commands in parallel using ThreadPoolExecutor (or ProcessPoolExecutor if Cell2Fire is CPU bound)
-        with PPE(max_workers=2) as executor: # Or PPE(max_workers=2) - Experiment with PPE for potentially better CPU utilization
+        with TPE(max_workers=2) as executor: # Or PPE(max_workers=2) - Experiment with PPE for potentially better CPU utilization
             future1 = executor.submit(run_command, cmd)
             future2 = executor.submit(run_command, cmd_base)
             concurrent.futures.wait([future1, future2]) 
@@ -304,7 +305,7 @@ class PPOAgent:
             prop_ones_base = total_ones_base / total_base
             penalty_value = -0
             rows, cols = data_FB.shape
-            '''
+            
             penalty = -0.1
             for index in topk_indices:
                 r, c = index // cols, index % cols
@@ -312,7 +313,7 @@ class PPOAgent:
                 if np.all(neighbors == 0):
                     penalty += penalty_value
             difference += penalty
-            '''
+            
             computed_values.append(difference)
             print("DifferenceValue:", difference)
         if not computed_values:
@@ -481,7 +482,7 @@ class PPOAgent:
         
         print("FINAL", final_average)
         return final_average
-    '''
+    
 
     def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
         """
