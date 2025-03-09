@@ -152,7 +152,7 @@ class PPOAgent:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
 
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = False, work_folder = None, output_folder = None, output_folder_base = None):
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None, output_folder_base = None):
         num_grids = 10
         work_folder = work_folder or self.new_folder 
         
