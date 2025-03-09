@@ -157,14 +157,16 @@ class PPOAgent:
             ROS = str(np.round(np.random.uniform(0.0, 1.0), 2))
             IR = str(np.random.randint(1, 6))
             HF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            seed = str(np.random.randint(1, 7))
             FF = str(np.round(np.random.uniform(0.5, 2.0), 2))
             BF = str(np.round(np.random.uniform(0.5, 2.0), 2))
             EF = str(np.round(np.random.uniform(0.5, 2.0), 2))
         else:
             FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
-            ROS = str(0.0)
+            ROS = str(0.1)
             IR = str(4)
             HF = str(1.2)
+            seed = str(np.random.randint(1, 7))
             FF = str(1.2)
             BF = str(1.2)
             EF = str(1.2)
@@ -194,7 +196,7 @@ class PPOAgent:
                 "--nweathers", str(1),
                 "--output-messages",
                 "--ROS-CV", ROS,
-                "--seed", str(1),
+                "--seed", seed,
                 "--IgnitionRad", IR,
                 "--HFactor", HF,
                 "--FFactor", FF,
@@ -216,7 +218,7 @@ class PPOAgent:
                 "--nweathers", str(1),
                 "--output-messages",
                 "--ROS-CV", ROS,
-                "--seed", str(1),
+                "--seed", seed,
                 "--IgnitionRad", IR,
                 "--HFactor", HF,
                 "--FFactor", FF,
@@ -322,7 +324,7 @@ class PPOAgent:
         self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
         reward = self.run_random_cell2fire_and_analyze(action_indices,
                                                             parallel=True,
-                                                            stochastic=True,
+                                                            stochastic=False,
                                                             work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
         
         return reward
@@ -396,8 +398,6 @@ class PPOAgent:
         actions = trajectories['actions'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
         rewards = trajectories['rewards'].to(self.device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-8)
-        trajectories['rewards'] = rewards
         dones = trajectories['dones'].to(self.device)
         old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
 
