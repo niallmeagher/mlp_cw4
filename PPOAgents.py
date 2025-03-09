@@ -152,7 +152,7 @@ class PPOAgent:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
 
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None, output_folder_base = None):
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = False, work_folder = None, output_folder = None, output_folder_base = None):
         num_grids = 10
         work_folder = work_folder or self.new_folder 
         
@@ -165,14 +165,16 @@ class PPOAgent:
             ROS = str(np.round(np.random.uniform(0.0, 1.0), 2))
             IR = str(np.random.randint(1, 6))
             HF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            seed = str(np.random.randint(1, 6))
             FF = str(np.round(np.random.uniform(0.5, 2.0), 2))
             BF = str(np.round(np.random.uniform(0.5, 2.0), 2))
             EF = str(np.round(np.random.uniform(0.5, 2.0), 2))
         else:
             FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
-            ROS = str(0.0)
+            ROS = str(0.1)
             IR = str(4)
             HF = str(1.2)
+            seed = str(np.random.randint(1, 6))
             FF = str(1.2)
             BF = str(1.2)
             EF = str(1.2)
@@ -202,7 +204,7 @@ class PPOAgent:
                 "--nweathers", str(1),
                 "--output-messages",
                 "--ROS-CV", ROS,
-                "--seed", str(1),
+                "--seed", seed,
                 "--IgnitionRad", IR,
                 "--HFactor", HF,
                 "--FFactor", FF,
@@ -224,7 +226,7 @@ class PPOAgent:
                 "--nweathers", str(1),
                 "--output-messages",
                 "--ROS-CV", ROS,
-                "--seed", str(1),
+                "--seed", seed,
                 "--IgnitionRad", IR,
                 "--HFactor", HF,
                 "--FFactor", FF,
@@ -404,8 +406,6 @@ class PPOAgent:
         actions = trajectories['actions'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
         rewards = trajectories['rewards'].to(self.device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-8)
-        trajectories['rewards'] = rewards
         dones = trajectories['dones'].to(self.device)
         old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
 
