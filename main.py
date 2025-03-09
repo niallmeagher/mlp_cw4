@@ -200,7 +200,6 @@ def main(args, start_epoch=0, checkpoint_path=None):
     # Initialize PPO Agent (update input channels if needed)
     new_folder=f'{input_dir}_Test/'
     input_folder_final=f'{input_dir}/'
-    input_folder_final = os.path.join("/tmp",f"cell2fire_input_final/" )
     output_folder=f'{output_dir}v2'
     output_folder_base=f'{output_dir}_base/'
     #agent = PPOAgent(input_channels=4, learned_reward=False)
