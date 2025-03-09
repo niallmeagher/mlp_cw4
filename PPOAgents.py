@@ -15,7 +15,7 @@ import uuid
 import csv
 import tempfile
 import concurrent.futures
-
+from concurrent.futures import ProcessPoolExecutor as PPE
 username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
 
@@ -199,7 +199,7 @@ class PPOAgent:
                 print("Stdout:", result.stdout)
                 print("Stderr:", result.stderr)
             return result
-            
+
         try:
             cmd = [
                 f"{HOME_DIR}./Cell2Fire",
@@ -244,11 +244,12 @@ class PPOAgent:
                 "--BFactor", BF,
                 "--EFactor", EF
             ]
+            print(cmd, cmd_base)
             if parallel == False:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
-                with concurrent.futures.ThreadPoolExecutor() as executor:
+                with PPE() as executor:
                     print("SUCCESS")
                     future1 = executor.submit(run_command, cmd)
                     print("SUCCESS1")
