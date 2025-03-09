@@ -9,9 +9,9 @@ import csv
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
 
-# These shouldn't be necessary as directories are cl args now
-# HOME_DIR = '/home/s2750319/Cell2Fire/' # UPDATE THIS TO POINT TO YOUR STUDENT NUMBER
-# dir = f"{HOME_DIR}cell2fire/Cell2FireC/"
+username = os.getenv('USER')
+HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
+
 
 def save_checkpoint(agent, epoch, checkpoint_dir=f"{HOME_DIR}/data/Sub20x20_Test/Checkpoints"):
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -185,7 +185,7 @@ def main(args):
             state = tensor_input.clone()
             valid_actions_mask = mask
             
-            action_indices, log_prob, value, real_action = agent.select_action(state, tabular_tensor, valid_actions_mask)
+            action_indices, log_prob, value, state = agent.select_action(state, tabular_tensor, valid_actions_mask)
             
             print("Value", value)
             
@@ -225,7 +225,7 @@ def main(args):
 
         output_file.write(f"{epoch+1},{avg_reward:.4f}\n")
 
-    test_state = torch.zeros(1, 4, 20, 20)
+        test_state = torch.zeros(1, 4, 20, 20)
 
         with open(csv_file, "a", newline="") as f:
             writer = csv.writer(f)

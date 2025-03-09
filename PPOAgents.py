@@ -65,7 +65,8 @@ class PPOAgent:
         self.gae_lambda = 0.95
 
         if self.learned_reward:
-            self.reward_net = RewardFunction(state_channels=input_channels, state_size=20, num_actions=num_actions).to(self.device)
+            self.reward_net = RewardFunction(state_channels=input_channels, state_size=20, 
+                                             num_actions=num_actions).to(self.device)
             self.reward_optimizer = torch.optim.Adam(self.reward_net.parameters(), lr=lr)
         else:
             self.reward_net = None
@@ -206,14 +207,19 @@ class PPOAgent:
         if mask is not None:
             mask = mask.to(self.device)
         
+        topk_indices = []
+        for _ in range(20):
+            dist, value = self.network(state, tabular=weather, mask=mask)
+            flat_logits = dist.logits.flatten()
+            _, top_index = torch.topk(flat_logits, k=1)
+            topk_indices.append(top_index)
 
-        dist, value = self.network(state, tabular=weather, mask=mask)
-        probs = F.softmax(dist.logits, dim=-1)
-        probs = probs.reshape(20, 20)
-        flat_logits = dist.logits.flatten()
-        topk_values, topk_indices = torch.topk(flat_logits, k=20)
+            # Update state
+            update_row, update_col = top_index // state.shape[3], top_index % state.shape[3]
+            state[:,0,update_row, update_col] = 101
+
         log_prob = dist.log_prob(topk_indices).sum()
-        return topk_indices, log_prob, value, probs
+        return topk_indices, log_prob, value, state
 
     def reward_function(self, state, action):
         if self.learned_reward:
