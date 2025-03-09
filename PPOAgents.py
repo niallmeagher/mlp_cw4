@@ -191,10 +191,15 @@ class PPOAgent:
             EF = str(1.2)
 
         def run_command(command):
-            return subprocess.run(command, check=True,
-                              stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL)
-
+            result = subprocess.run(command, check=False,  # Set check=False to avoid raising exception immediately
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True)
+            if result.returncode != 0:
+                print(f"Command failed: {command}")
+                print("Stdout:", result.stdout)
+                print("Stderr:", result.stderr)
+            return result
+            
         try:
             cmd = [
                 f"{HOME_DIR}./Cell2Fire",
