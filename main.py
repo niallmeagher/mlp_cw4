@@ -147,14 +147,14 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         print("Finally")
     done = torch.tensor(1, dtype=torch.float32, device=agent.device)
     return {
-        'state': state,
-        'action': action_indices,
-        'log_prob': log_prob,
-        'value': value,
+        'state': state.detach(),
+        'action': action_indices.detach(),
+        'log_prob': log_prob.detach(),
+        'value': value.detach(),
         'reward': torch.tensor([true_reward], dtype=torch.float32),
         'done': done,
-        'weather': tabular_tensor,
-        'mask': mask,
+        'weather': tabular_tensor.detach(),
+        'mask': mask.detach(),
         'true_reward': torch.tensor([true_reward], dtype=torch.float32)
     }
 
