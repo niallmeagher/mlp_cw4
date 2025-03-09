@@ -15,6 +15,7 @@ import uuid
 import csv
 import tempfile
 import concurrent.futures
+from torch.nn.parallel import DistributedDataParallel as DDP
 from concurrent.futures import ProcessPoolExecutor as PPE
 from concurrent.futures import ThreadPoolExecutor as TPE
 username = os.getenv('USER')
@@ -65,6 +66,9 @@ class PPOAgent:
         self.new_folder = new_folder
         self.output_folder = output_folder
         self.output_folder_base = output_folder_base
+        self.num_gpus = torch.cuda.device_count()
+        if self.num_gpus > 1:
+            self.network = nn.DataParallel(self.network)
 
         # Add a GAE lambda hyperparameter (commonly around 0.95)
         self.gae_lambda = 0.95
