@@ -473,26 +473,26 @@ class PPOAgent:
         for _ in range(self.update_epochs):
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
             dist = Categorical(logits=actor_logits)
-            '''
+            
             new_log_probs = []
             for i in range(states.size(0)):
                 dist_i_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
                                          mask=masks[i:i+1] if masks is not None else None)
-                #dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
-                probs_i = F.softmax(dist_i_logits, dim=-1)
-                log_prob = 0
-                remaining_probs = probs_i.clone()
-                for action in actions[i]:
-                    action_idx = action.item()
-                    log_prob += torch.log(remaining_probs[0, action_idx] + 1e-10)
-                    remaining_probs[0, action_idx] = 0
-                    remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
-                new_log_probs.append(log_prob)
-                #new_log_probs.append(dist_i.log_prob(actions[i]).sum())
+                dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
+               # probs_i = F.softmax(dist_i_logits, dim=-1)
+               # log_prob = 0
+              #  remaining_probs = probs_i.clone()
+              #  for action in actions[i]:
+              #      action_idx = action.item()
+              #      log_prob += torch.log(remaining_probs[0, action_idx] + 1e-10)
+              #      remaining_probs[0, action_idx] = 0
+               #     remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
+               # new_log_probs.append(log_prob)
+                new_log_probs.append(dist_i.log_prob(actions[i]).sum())
 
             new_log_probs = torch.stack(new_log_probs)
-            '''
-            new_log_probs = dist.log_prob(actions).sum(dim=1)
+            
+           # new_log_probs = dist.log_prob(actions).sum(dim=1)
             entropy = dist.entropy().mean()
             delta_log = torch.clamp(new_log_probs - old_log_probs, -10, 10)
             print("PROBS", new_log_probs, old_log_probs,new_log_probs -old_log_probs, torch.exp(new_log_probs -old_log_probs) )
