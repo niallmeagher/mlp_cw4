@@ -408,15 +408,14 @@ class PPOAgent:
                                          mask=masks[i:i+1] if masks is not None else None)
                 #dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
                 probs_i = F.softmax(dist_i_logits, dim=-1)
-                log_prob = 0
+                remaining_probs = probs_i.clone()
                 for action in actions[i]:
                     action_idx = action.item()
-                    log_prob += torch.log(probs_i[0, action_idx] + 1e-10)
-                    probs_i[0, action_idx] = 0
-                    probs_i = probs_i / (probs_i.sum() + 1e-10)
-
-                #new_log_probs.append(dist_i.log_prob(actions[i]).sum())
+                    log_prob += torch.log(remaining_probs[0, action_idx] + 1e-10)
+                    remaining_probs[0, action_idx] = 0
+                    remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
                 new_log_probs.append(log_prob)
+                #new_log_probs.append(dist_i.log_prob(actions[i]).sum())
 
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
