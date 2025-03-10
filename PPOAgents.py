@@ -344,12 +344,17 @@ class PPOAgent:
         flat_logits2 = dist.logits.flatten()
         topk_values2, topk_indices2 = torch.topk(flat_logits2, k=20)
         log_prob2 = dist.log_prob(topk_indices2).sum()
-        print("After", topk_indices2, log_prob2, value, probs2)
+        print("Before", topk_indices2, log_prob2, value, probs2)
         #return topk_indices, log_prob, value, probs
         
         remaining_probs = probs.clone()
         log_prob = 0
         selected_indices = []
+        flat_probs = remaining_probs.flatten()
+        if mask is not None:
+            flat_mask = mask.flatten()
+        else:
+            flat_mask = torch.ones_like(flat_probs)
     
         for _ in range(20):  # Select 20 indices
         # Get the current highest probability index
@@ -358,21 +363,21 @@ class PPOAgent:
             else:
                 masked_probs = remaining_probs
             
-            _, index = torch.max(masked_probs, dim=1)
+            _, index = torch.max(masked_probs, dim=0)
             index = index.item()
         
         # Add to our log probability
-            log_prob += torch.log(remaining_probs[0, index] + 1e-10)
+            log_prob += torch.log(remaining_probs[index] + 1e-10)
         
         # Add to our selected indices
             selected_indices.append(index)
         
         # Zero out this probability and renormalize
-            remaining_probs[0, index] = 0
-            remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
+           # remaining_probs[0, index] = 0
+           # remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
     
         topk_indices = torch.tensor(selected_indices, device=self.device)
-        print("Before", topk_indices)
+        print("After", topk_indices)
         return topk_indices, log_prob, value, reshaped_probs
 
     def reward_function(self, state, action):
