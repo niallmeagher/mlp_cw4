@@ -213,13 +213,15 @@ class PPOAgent:
             dist, value = self.network(state, tabular=weather, mask=mask)
             flat_logits = dist.logits.flatten()
             _, top_index = torch.topk(flat_logits, k=1)
-            topk_indices.append(top_index)
+            topk_indices.append(top_index[0])
 
             # Update state
             update_row, update_col = top_index // state.shape[3], top_index % state.shape[3]
             state[:,0,update_row, update_col] = 101
-            mask[top_index] = 0
+            mask[0][top_index] = 0
 
+        # Convert top indices to a tensor
+        topk_indices = torch.tensor(topk_indices, dtype=torch.float32)
         log_prob = dist.log_prob(topk_indices).sum()
         return topk_indices, log_prob, value, state, mask
 
