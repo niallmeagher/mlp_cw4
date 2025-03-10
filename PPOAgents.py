@@ -340,13 +340,13 @@ class PPOAgent:
         probs = F.softmax(dist.logits, dim=-1)
         reshaped_probs= probs.reshape(20, 20)
         
-        probs2 = probs.reshape(20, 20)
-        flat_logits2 = dist.logits.flatten()
-        topk_values2, topk_indices2 = torch.topk(flat_logits2, k=20)
-        log_prob2 = dist.log_prob(topk_indices2).sum()
-        print("Before", topk_indices2, log_prob2, value, probs2)
-        #return topk_indices, log_prob, value, probs
-        
+        probs = probs.reshape(20, 20)
+        flat_logits = dist.logits.flatten()
+        topk_values, topk_indices = torch.topk(flat_logits, k=20)
+        log_prob = dist.log_prob(topk_indices).sum()
+        #print("Before", topk_indices2, log_prob2, value, probs2)
+        return topk_indices, log_prob, value, probs
+        '''
         remaining_probs = probs.clone()
         log_prob = 0
         selected_indices = []
@@ -381,6 +381,7 @@ class PPOAgent:
         topk_indices = torch.tensor(selected_indices, device=self.device)
         print("After", topk_indices)
         return topk_indices, log_prob, value, reshaped_probs
+        '''
 
     def reward_function(self, state, action):
         if self.learned_reward:
