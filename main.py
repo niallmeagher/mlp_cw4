@@ -184,7 +184,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     
     
     try:
-        action_indices, log_prob, value, _ = agent.select_action(state, tabular_tensor, mask)
+        action_indices, log_prob, value, continuous_actions = agent.select_action(state, tabular_tensor, mask)
         true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_work_dir, output_folder = temp_output_dir, output_folder_base = temp_output_base_dir)
         
         if true_reward is None: # Check if reward is None
@@ -226,7 +226,8 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         'done': done,
         'weather': tabular_tensor.detach(),
         'mask': mask.detach(),
-        'true_reward': torch.tensor([true_reward], dtype=torch.float32)
+        'true_reward': torch.tensor([true_reward], dtype=torch.float32),
+        'continuous_actions': continuous_actions.detach()
     }
     
 
@@ -282,7 +283,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
             'dones': [],
             'masks': [],
             'true_rewards': [],
-            'weather': []
+            'weather': [],
+            'continuous_actions': []
         }
         epoch_rewards = []
         epoch_values = []
@@ -362,6 +364,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
             trajectories['weather'].append(res['weather'])
             trajectories['masks'].append(res['mask'])
             trajectories['true_rewards'].append(res['true_reward'])
+            trajectories['continuous_actions'].append(res['continuous_actions'])
             total_reward += res['reward'].item()
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'], dim=0)
@@ -373,6 +376,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
         trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
+        trajectories['continuous_actions'] = torch.cat(trajectories['continuous_actions'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
 
 

@@ -19,6 +19,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.cuda.amp import autocast, GradScaler
 from concurrent.futures import ProcessPoolExecutor as PPE
 from concurrent.futures import ThreadPoolExecutor as TPE
+from torch.distributions import MultivariateNormal
 import multiprocessing as mp
 username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
@@ -68,7 +69,9 @@ class PPOAgent:
         self.new_folder = new_folder
         self.output_folder = output_folder
         self.output_folder_base = output_folder_base
+
         self.num_gpus = torch.cuda.device_count()
+        
         if self.num_gpus > 1:
             self.network = nn.DataParallel(self.network)
         self.network.to(self.device)
@@ -328,6 +331,7 @@ class PPOAgent:
 
     # Forward pass to get actor logits and value
         actor_logits, value = self.network(state, tabular=weather, mask=mask)
+        '''
         dist = Categorical(logits=actor_logits)
         probs = F.softmax(actor_logits, dim=-1).reshape(20, 20)
 
@@ -348,8 +352,25 @@ class PPOAgent:
     # Calculate log probability for the sampled actions
         log_probs = dist.log_prob(action_indices)
         log_prob = log_probs.sum()  # Sum log probabilities
+        '''
+        std = torch.ones_like(actor_logits)  # fixed std=1.0
+        cov_matrix = torch.diag_embed(std ** 2)
+    
+    # Create the multivariate normal distribution.
+        dist = torch.distributions.MultivariateNormal(actor_logits, covariance_matrix=cov_matrix)
+    
+    # Sample a continuous action vector.
+        continuous_action = dist.sample()  # shape: (1, num_actions)
+    
+    # Extract top 20 values (and their indices) along the action dimension.
+        topk_values, topk_indices = torch.topk(continuous_action, k=20, dim=1)
+        action_indices= topk_indices.squeeze(0)
+    
+    # Compute the log probability of the entire continuous sample.
+        log_prob = dist.log_prob(continuous_action)
+        continuous_action = continuous_action.squeeze(0)
 
-        return action_indices, log_prob, value, probs
+        return action_indices, log_prob, value, continuous_action
     '''
     def select_action(self, state, weather=None, mask=None):
        # """
@@ -456,6 +477,7 @@ class PPOAgent:
         masks = trajectories['masks'].to(self.device)
         weather = trajectories['weather'].to(self.device)
         actions = trajectories['actions'].to(self.device)
+        continuous_actions = trajectories['continuous_actions'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
         rewards = trajectories['rewards'].to(self.device)
         dones = trajectories['dones'].to(self.device)
@@ -472,8 +494,8 @@ class PPOAgent:
 
         for _ in range(self.update_epochs):
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
-            dist = Categorical(logits=actor_logits)
-            
+            dist2 = Categorical(logits=actor_logits)
+            '''
             new_log_probs = []
             for i in range(states.size(0)):
                 dist_i_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
@@ -489,8 +511,16 @@ class PPOAgent:
                #     remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
                # new_log_probs.append(log_prob)
                 new_log_probs.append(dist_i.log_prob(actions[i]).sum())
+            '''
 
-            new_log_probs = torch.stack(new_log_probs)
+           # new_log_probs = torch.stack(new_log_probs)
+            mean = actor_logits  # new means for each sample
+            std = torch.ones_like(mean)  # fixed std (same as in select_action)
+            cov_matrix = torch.diag_embed(std ** 2)
+            dist = torch.distributions.MultivariateNormal(mean, covariance_matrix=cov_matrix)
+        
+        # Evaluate the log probability of the stored continuous actions under the new policy.
+            new_log_probs = dist.log_prob(continuous_actions)
             
            # new_log_probs = dist.log_prob(actions).sum(dim=1)
             entropy = dist.entropy().mean()
