@@ -334,15 +334,44 @@ class PPOAgent:
             weather = weather.to(self.device)
 
 
-        actor_logits, value = self.network(state, tabular=weather, mask=mask) # Get logits and value
-        dist = Categorical(logits=actor_logits) # Create Categorical distribution here
+        actor_logits, value = self.network(state, tabular=weather, mask=mask)
+        dist = Categorical(logits=actor_logits)
 
         probs = F.softmax(dist.logits, dim=-1)
+        reshaped_probs= probs.reshape(20, 20)
+        '''
         probs = probs.reshape(20, 20)
         flat_logits = dist.logits.flatten()
         topk_values, topk_indices = torch.topk(flat_logits, k=20)
         log_prob = dist.log_prob(topk_indices).sum()
         return topk_indices, log_prob, value, probs
+        '''
+        remaining_probs = probs.clone()
+        log_prob = 0
+        selected_indices = []
+    
+        for _ in range(20):  # Select 20 indices
+        # Get the current highest probability index
+            if mask is not None:
+                masked_probs = remaining_probs * mask
+            else:
+                masked_probs = remaining_probs
+            
+            _, index = torch.max(masked_probs, dim=1)
+            index = index.item()
+        
+        # Add to our log probability
+            log_prob += torch.log(remaining_probs[0, index] + 1e-10)
+        
+        # Add to our selected indices
+            selected_indices.append(index)
+        
+        # Zero out this probability and renormalize
+            remaining_probs[0, index] = 0
+            remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
+    
+        topk_indices = torch.tensor(selected_indices, device=self.device)
+        return topk_indices, log_prob, value, reshaped_probs
 
     def reward_function(self, state, action):
         if self.learned_reward:

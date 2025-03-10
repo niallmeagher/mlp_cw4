@@ -270,14 +270,12 @@ def main(args, start_epoch=0, checkpoint_path=None):
         f"{input_dir}/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
-    # Build a mask for valid actions from the first channel.
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
-   # print(mask)
     for epoch in range(start_epoch, num_epochs):
         trajectories = {
             'states': [],
-            'actions': [],       # will store tensors of shape (20,)
+            'actions': [],
             'log_probs': [],
             'values': [],
             'rewards': [],
