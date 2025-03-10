@@ -408,6 +408,7 @@ class PPOAgent:
                                          mask=masks[i:i+1] if masks is not None else None)
                 #dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
                 probs_i = F.softmax(dist_i_logits, dim=-1)
+                log_prob = 0
                 remaining_probs = probs_i.clone()
                 for action in actions[i]:
                     action_idx = action.item()
