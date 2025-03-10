@@ -318,15 +318,47 @@ class PPOAgent:
                                                             work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
         
         return reward
-    
     def select_action(self, state, weather=None, mask=None):
-        """
-        Returns:
-            action_indices: tensor of shape (20,) containing the selected 20 indices.
-            log_prob: aggregated log probability for the 20 selected actions.
-            value: critic value for the state.
-            probs: reshaped probabilities grid (20 x 20) for reference.
-        """
+    
+        state = state.to(self.device)
+        if mask is not None:
+            mask = mask.to(self.device)
+        if weather is not None:
+           weather = weather.to(self.device)
+
+    # Forward pass to get actor logits and value
+        actor_logits, value = self.network(state, tabular=weather, mask=mask)
+        dist = Categorical(logits=actor_logits)
+        probs = F.softmax(actor_logits, dim=-1).reshape(20, 20)
+
+    # Convert to probabilities and sample 20 unique actions
+        valid_logits = actor_logits.clone()
+        if mask is not None:
+            valid_logits = valid_logits.masked_fill(mask == 0, -1e10)  # Apply mask
+
+    # Ensure there are at least 20 valid actions
+        valid_indices = (valid_logits > -1e10).nonzero(as_tuple=True)[1]
+        if len(valid_indices) < 20:
+            raise ValueError("Fewer than 20 valid actions available. Adjust the mask.")
+
+    # Sample 20 unique actions using torch.multinomial without replacement
+        action_probs = F.softmax(valid_logits, dim=-1).squeeze(0)
+        action_indices = torch.multinomial(action_probs, 20, replacement=False)
+
+    # Calculate log probability for the sampled actions
+        log_probs = dist.log_prob(action_indices)
+        log_prob = log_probs.sum()  # Sum log probabilities
+
+        return action_indices, log_prob, value, probs
+    '''
+    def select_action(self, state, weather=None, mask=None):
+       # """
+       # Returns:
+       #     action_indices: tensor of shape (20,) containing the selected 20 indices.
+       #     log_prob: aggregated log probability for the 20 selected actions.
+       #     value: critic value for the state.
+       #     probs: reshaped probabilities grid (20 x 20) for reference.
+       # """
         state = state.to(self.device)
         if mask is not None:
             mask = mask.to(self.device)
@@ -346,7 +378,7 @@ class PPOAgent:
         log_prob = dist.log_prob(topk_indices).sum()
         #print("Before", topk_indices2, log_prob2, value, probs2)
         return topk_indices, log_prob, value, probs
-        '''
+        
         remaining_probs = probs.clone()
         log_prob = 0
         selected_indices = []
