@@ -441,6 +441,7 @@ class PPOAgent:
         for _ in range(self.update_epochs):
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
             dist = Categorical(logits=actor_logits)
+            '''
             new_log_probs = []
             for i in range(states.size(0)):
                 dist_i_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
@@ -458,6 +459,8 @@ class PPOAgent:
                 #new_log_probs.append(dist_i.log_prob(actions[i]).sum())
 
             new_log_probs = torch.stack(new_log_probs)
+            '''
+            new_log_probs = dist.log_prob(actions).sum(dim=1)
             entropy = dist.entropy().mean()
             delta_log = torch.clamp(new_log_probs - old_log_probs, -10, 10)
             print("PROBS", new_log_probs, old_log_probs,new_log_probs -old_log_probs, torch.exp(new_log_probs -old_log_probs) )
