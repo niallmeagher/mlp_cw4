@@ -366,7 +366,7 @@ class PPOAgent:
         continuous_action = mean.reshape(20, 20)
 
         return action_indices, log_prob, value, continuous_action
-    '''
+    
     def select_action(self, state, weather=None, mask=None):
        # """
        # Returns:
@@ -393,6 +393,7 @@ class PPOAgent:
         log_prob = dist.log_prob(topk_indices).sum()
         #print("Before", topk_indices2, log_prob2, value, probs2)
         return topk_indices, log_prob, value, probs
+    '''
     def select_action(self, state, weather=None, mask=None):
         state = state.to(self.device)
         if mask is not None:
@@ -426,7 +427,7 @@ class PPOAgent:
     # Compute log probability of the entire continuous sample
         log_prob = dist.log_prob(continuous_action).sum()
     
-        return topk_indices, log_prob, value, mean.squeeze(0)
+        return topk_indices, log_prob, value, continuous_action
         
         
 
@@ -537,6 +538,7 @@ class PPOAgent:
         masks = trajectories['masks'].to(self.device)
         weather = trajectories['weather'].to(self.device)
         actions = trajectories['actions'].to(self.device)
+        continuous_actions = trajectories['continuous_action'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
         rewards = trajectories['rewards'].to(self.device)
         dones = trajectories['dones'].to(self.device)
@@ -574,15 +576,17 @@ class PPOAgent:
             
             # Create a sample based on the action indices
             # We need to reconstruct the continuous action that would have led to these indices
-                continuous_action = torch.zeros_like(state_mean)
+               # continuous_action = torch.zeros_like(state_mean)
             
             # Set values at the selected indices
-                for idx in actions[i]:
-                    continuous_action.flatten()[idx] = 1.0
+                #for idx in actions[i]:
+                #    continuous_action.flatten()[idx] = 1.0
                 
             # Compute log probability of this continuous action
-                state_log_prob = state_dist.log_prob(continuous_action).sum()
-                new_log_probs.append(state_log_prob)
+               # state_log_prob = state_dist.log_prob(continuous_action).sum()
+                #new_log_probs.append(state_log_prob)
+                original_action = trajectories['continuous_actions'][i]
+                new_log_probs.append(state_dist.log_prob(original_action).sum())
         
             new_log_probs = torch.stack(new_log_probs)
         
