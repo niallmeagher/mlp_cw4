@@ -356,6 +356,7 @@ class PPOAgent:
         actor_logits = actor_logits.clone().detach().float().contiguous()
         std = torch.ones_like(actor_logits).float().to(self.device)
         cov_matrix = torch.diag_embed(std.pow(2)).contiguous()
+        cov_matrix = cov_matrix.clone().detach()
         dist = torch.distributions.MultivariateNormal(actor_logits, covariance_matrix=cov_matrix)
     
     # Create the multivariate normal distribution.
