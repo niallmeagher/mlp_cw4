@@ -354,9 +354,9 @@ class PPOAgent:
         log_prob = log_probs.sum()  # Sum log probabilities
         '''
         actor_logits = actor_logits.clone().detach().float().contiguous()
-        std =  torch.full(size=(actor_logits.size()), fill_value=0.5)
+        std =  torch.full(size=(actor_logits.shape), fill_value=0.5)
         cov_matrix = torch.diag(std).detach()
-        dist = torch.distributions.MultivariateNormal(actor_logits, covariance_matrix=cov_matrix)
+        dist = MultivariateNormal(actor_logits, covariance_matrix=cov_matrix)
     
     # Create the multivariate normal distribution.
         
