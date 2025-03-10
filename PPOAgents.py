@@ -321,6 +321,7 @@ class PPOAgent:
                                                             work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
         
         return reward
+    '''
     def select_action(self, state, weather=None, mask=None):
     
         state = state.to(self.device)
@@ -331,28 +332,7 @@ class PPOAgent:
 
     # Forward pass to get actor logits and value
         actor_logits, value = self.network(state, tabular=weather, mask=mask)
-        '''
-        dist = Categorical(logits=actor_logits)
-        probs = F.softmax(actor_logits, dim=-1).reshape(20, 20)
-
-    # Convert to probabilities and sample 20 unique actions
-        valid_logits = actor_logits.clone()
-        if mask is not None:
-            valid_logits = valid_logits.masked_fill(mask == 0, -1e10)  # Apply mask
-
-    # Ensure there are at least 20 valid actions
-        valid_indices = (valid_logits > -1e10).nonzero(as_tuple=True)[1]
-        if len(valid_indices) < 20:
-            raise ValueError("Fewer than 20 valid actions available. Adjust the mask.")
-
-    # Sample 20 unique actions using torch.multinomial without replacement
-        action_probs = F.softmax(valid_logits, dim=-1).squeeze(0)
-        action_indices = torch.multinomial(action_probs, 20, replacement=False)
-
-    # Calculate log probability for the sampled actions
-        log_probs = dist.log_prob(action_indices)
-        log_prob = log_probs.sum()  # Sum log probabilities
-        '''
+        
         #actor_logits = actor_logits.clone().detach().float().contiguous().to(self.device)
         #std =  torch.full(size=(actor_logits.shape), fill_value=0.5, device = self.device)
         #cov_matrix = torch.diag_embed(std).detach().to(self.device)
@@ -406,7 +386,6 @@ class PPOAgent:
         dist = Categorical(logits=actor_logits)
 
         probs = F.softmax(dist.logits, dim=-1)
-        reshaped_probs= probs.reshape(20, 20)
         
         probs = probs.reshape(20, 20)
         flat_logits = dist.logits.flatten()
@@ -414,42 +393,42 @@ class PPOAgent:
         log_prob = dist.log_prob(topk_indices).sum()
         #print("Before", topk_indices2, log_prob2, value, probs2)
         return topk_indices, log_prob, value, probs
-        
-        remaining_probs = probs.clone()
-        log_prob = 0
-        selected_indices = []
-        flat_probs = remaining_probs.flatten()
+    def select_action(self, state, weather=None, mask=None):
+        state = state.to(self.device)
         if mask is not None:
-            flat_mask = mask.flatten()
-        else:
-            flat_mask = torch.ones_like(flat_probs)
+            mask = mask.to(self.device)
+        if weather is not None:
+            weather = weather.to(self.device)
+
+    # Forward pass to get actor logits and value
+        actor_logits, value = self.network(state, tabular=weather, mask=mask)
     
-        for _ in range(20):  # Select 20 indices
-        # Get the current highest probability index
-            if mask is not None:
-                masked_probs = flat_probs * flat_mask
-            else:
-                masked_probs = remaining_probs
-            
-            _, index = torch.max(masked_probs, dim=0)
-            print(_, index)
-            
-            index = index.item()
-        
-        # Add to our log probability
-            log_prob += torch.log(flat_probs[index] + 1e-10)
-        
-        # Add to our selected indices
-            selected_indices.append(index)
-        
-        # Zero out this probability and renormalize
-            flat_probs[index] = 0
-           # remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
+    # Use actor_logits as the mean of a distribution
+        mean = torch.sigmoid(actor_logits)  # Convert to [0,1] range
     
-        topk_indices = torch.tensor(selected_indices, device=self.device)
-        print("After", topk_indices)
-        return topk_indices, log_prob, value, reshaped_probs
-        '''
+    # Fixed standard deviation for exploration control
+        std = 0.1
+    
+    # Create normal distribution
+        dist = torch.distributions.Normal(mean, std)
+    
+    # Sample from the distribution
+        continuous_action = dist.sample()  # shape: (batch_size, num_actions)
+    
+    # Apply mask if provided
+        if mask is not None:
+            continuous_action = continuous_action * mask
+    
+    # Extract top 20 values and their indices
+        topk_values, topk_indices = torch.topk(continuous_action, k=20, dim=1)
+        topk_indices = topk_indices.squeeze(0)
+    
+    # Compute log probability of the entire continuous sample
+        log_prob = dist.log_prob(continuous_action).sum()
+    
+        return topk_indices, log_prob, value, mean.squeeze(0)
+        
+        
 
     def reward_function(self, state, action):
         if self.learned_reward:
@@ -486,13 +465,13 @@ class PPOAgent:
             advantages[t] = gae
         returns = advantages + values
         return advantages, returns
+    '''
 
     def update(self, trajectories):
         states = trajectories['states'].to(self.device)
         masks = trajectories['masks'].to(self.device)
         weather = trajectories['weather'].to(self.device)
         actions = trajectories['actions'].to(self.device)
-        continuous_actions = trajectories['continuous_actions'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
         rewards = trajectories['rewards'].to(self.device)
         dones = trajectories['dones'].to(self.device)
@@ -511,48 +490,16 @@ class PPOAgent:
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
             dist2 = Categorical(logits=actor_logits)
         
-            means = torch.sigmoid(actor_logits)
-    
-        # Create covariance matrices (diagonal with fixed std)
-            std = 0.1  # Same as in select_action
-            batch_size = means.size(0)
-            action_dim = means.size(1)
-        
-        # Creating batched actions tensor for vectorized computation
-            actions_flat = torch.zeros(batch_size, action_dim, device=self.device)
-        
-            '''
             new_log_probs = []
             for i in range(states.size(0)):
                 dist_i_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
                                          mask=masks[i:i+1] if masks is not None else None)
                 dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
-               # probs_i = F.softmax(dist_i_logits, dim=-1)
-               # log_prob = 0
-              #  remaining_probs = probs_i.clone()
-              #  for action in actions[i]:
-              #      action_idx = action.item()
-              #      log_prob += torch.log(remaining_probs[0, action_idx] + 1e-10)
-              #      remaining_probs[0, action_idx] = 0
-               #     remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
-               # new_log_probs.append(log_prob)
                 new_log_probs.append(dist_i.log_prob(actions[i]).sum())
-            '''
-
-           # new_log_probs = torch.stack(new_log_probs)
-            for i in range(batch_size):
-                for idx in actions[i]:
-                    actions_flat[i, idx] = 1.0
-        # Create distributions for each item in the batch
             
-            new_log_probs = []
-            for i in range(batch_size):
-                cov_matrix = torch.eye(action_dim, device=self.device) * (std ** 2)
-                dist = torch.distributions.Normal(means[i], cov_matrix)
-                log_prob = dist.log_prob(actions_flat[i])
-                new_log_probs.append(log_prob)
-           # new_log_probs = dist.log_prob(actions).sum(dim=1)
+
             new_log_probs = torch.stack(new_log_probs)
+           
             entropy = dist2.entropy().mean()
             delta_log = torch.clamp(new_log_probs - old_log_probs, -10, 10)
             print("PROBS", new_log_probs, old_log_probs,new_log_probs -old_log_probs, torch.exp(new_log_probs -old_log_probs) )
@@ -584,6 +531,83 @@ class PPOAgent:
             self.reward_optimizer.zero_grad()
             reward_loss.backward()
             self.reward_optimizer.step()
+    '''
+    def update(self, trajectories):
+        states = trajectories['states'].to(self.device)
+        masks = trajectories['masks'].to(self.device)
+        weather = trajectories['weather'].to(self.device)
+        actions = trajectories['actions'].to(self.device)
+        old_log_probs = trajectories['log_probs'].to(self.device).detach()
+        rewards = trajectories['rewards'].to(self.device)
+        dones = trajectories['dones'].to(self.device)
+        old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
+
+        with torch.no_grad():
+            next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
+
+        advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        advantages = advantages.detach()
+        scaler = GradScaler()
+
+        for _ in range(self.update_epochs):
+        # Get current logits and values from the network
+            actor_logits, values = self.network(states, tabular=weather, mask=masks)
+        
+        # Use actor_logits as mean for distribution
+            mean = torch.sigmoid(actor_logits)
+            std = 0.1
+        
+        # Create normal distribution for each state
+            dist = torch.distributions.Normal(mean, std)
+        
+        # Calculate new log probabilities
+            new_log_probs = []
+            for i in range(states.size(0)):
+            # Get mean for this state
+                state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1], 
+                                         mask=masks[i:i+1] if masks is not None else None)
+                state_mean = torch.sigmoid(state_logits)
+            
+            # Create distribution
+                state_dist = torch.distributions.Normal(state_mean, std)
+            
+            # Create a sample based on the action indices
+            # We need to reconstruct the continuous action that would have led to these indices
+                continuous_action = torch.zeros_like(state_mean)
+            
+            # Set values at the selected indices
+                for idx in actions[i]:
+                    continuous_action.flatten()[idx] = 1.0
+                
+            # Compute log probability of this continuous action
+                state_log_prob = state_dist.log_prob(continuous_action).sum()
+                new_log_probs.append(state_log_prob)
+        
+            new_log_probs = torch.stack(new_log_probs)
+        
+        # Calculate entropy (optional, can be modified for Normal distribution)
+            entropy = -(mean * torch.log(mean + 1e-8) + (1 - mean) * torch.log(1 - mean + 1e-8)).mean()
+        
+        # Calculate ratio and clipped objective for PPO
+            ratio = torch.exp(new_log_probs - old_log_probs)
+            surr1 = ratio * advantages
+            surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
+            policy_loss = -torch.min(surr1, surr2).mean()
+        
+        # Value loss
+            value_loss = F.mse_loss(values.squeeze(-1), returns)
+        
+        # Combined loss
+            loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
+        
+        # Optimize
+            self.optimizer.zero_grad()
+            scaler.scale(loss).backward()
+            scaler.step(self.optimizer)
+            scaler.update()
+        
+            print("LOSS", policy_loss.item(), self.value_loss_coef, value_loss.item(), self.entropy_coef, entropy.item())
 
     def simulate_test_episode(self, state, action):
         TARGET_ACTION = 200
