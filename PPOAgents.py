@@ -364,7 +364,7 @@ class PPOAgent:
         cov_matrix = torch.eye(mean.shape[1], device=self.device) * (std ** 2)
     
     # Create the multivariate normal distribution
-        dist = MultivariateNormal(mean, cov_matrix)
+        dist = torch.distributions.Normal(mean, cov_matrix)
     
     # Sample from the distribution
     
@@ -548,7 +548,7 @@ class PPOAgent:
             new_log_probs = []
             for i in range(batch_size):
                 cov_matrix = torch.eye(action_dim, device=self.device) * (std ** 2)
-                dist = MultivariateNormal(means[i], cov_matrix)
+                dist = torch.distributions.Normal(means[i], cov_matrix)
                 log_prob = dist.log_prob(actions_flat[i])
                 new_log_probs.append(log_prob)
            # new_log_probs = dist.log_prob(actions).sum(dim=1)
