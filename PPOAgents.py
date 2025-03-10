@@ -369,13 +369,13 @@ class PPOAgent:
             index = index.item()
         
         # Add to our log probability
-            log_prob += torch.log(remaining_probs[index] + 1e-10)
+            log_prob += torch.log(flat_probs[index] + 1e-10)
         
         # Add to our selected indices
             selected_indices.append(index)
         
         # Zero out this probability and renormalize
-           # remaining_probs[0, index] = 0
+            flat_probs[index] = 0
            # remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
     
         topk_indices = torch.tensor(selected_indices, device=self.device)
