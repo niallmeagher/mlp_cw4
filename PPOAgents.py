@@ -364,6 +364,7 @@ class PPOAgent:
                 masked_probs = remaining_probs
             
             _, index = torch.max(masked_probs, dim=0)
+            print(_,index)
             index = index.item()
         
         # Add to our log probability
