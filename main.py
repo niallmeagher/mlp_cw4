@@ -370,8 +370,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['log_probs'] = torch.stack(trajectories['log_probs'], dim=0)
         trajectories['values'] = torch.cat(trajectories['values'], dim=0)
         trajectories['rewards'] = torch.cat(trajectories['rewards'], dim=0).squeeze(-1)
-        rewards = (trajectories['rewards'] - trajectories['rewards'].mean()) / (trajectories['rewards'].std() + 1e-8)
-        trajectories['rewards'] = rewards
+      #  rewards = (trajectories['rewards'] - trajectories['rewards'].mean()) / (trajectories['rewards'].std() + 1e-8)
+      #  trajectories['rewards'] = rewards
         trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
         trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)

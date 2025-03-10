@@ -53,7 +53,7 @@ class RewardFunction(nn.Module):
 
 class PPOAgent:
     
-    def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=5e-5, clip_epsilon=0.1,
+    def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.1,
                  value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=5, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
@@ -180,9 +180,8 @@ class PPOAgent:
             EF = str(1.2)
 
         def run_command(command):
-            result = subprocess.run(command, check=False,  # Set check=False to avoid raising exception immediately
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            text=True)
+            result = subprocess.run(command, check=True,  # Set check=False to avoid raising exception immediately
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
                 print(f"Command failed: {command}")
                 print("Stdout:", result.stdout)
@@ -233,17 +232,13 @@ class PPOAgent:
                 "--BFactor", BF,
                 "--EFactor", EF
             ]
-            print(cmd, cmd_base)
             if parallel == False:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 with TPE(max_workers=mp.cpu_count()) as executor:
-                    print("SUCCESS")
-                    future1 = executor.submit(run_command, cmd)
-                    print("SUCCESS1")
-                    future2 = executor.submit(run_command, cmd_base)
-                    print("SUCCESS2")
+                    future1 = executor.submit(run_command, cmd)           
+                    future2 = executor.submit(run_command, cmd_base)          
                     concurrent.futures.wait([future1, future2])
 
         except subprocess.CalledProcessError as e:
@@ -252,13 +247,8 @@ class PPOAgent:
             return None
         
         base_grids_folder = os.path.join(output_folder_base, "Grids")
-        print(os.listdir(output_folder),os.listdir(output_folder_base))
-        contents2 = os.listdir(base_grids_folder)
-        print(contents2)
         firebreak_grids_folder = os.path.join(output_folder, "Grids")
         computed_values = []
-        contents = os.listdir(firebreak_grids_folder)
-        print(contents)
         
         for i in range(1, num_grids + 1):
             csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
@@ -284,7 +274,6 @@ class PPOAgent:
             total_FB = total_ones_FB + total_zeros_FB
             prop_ones_FB = total_ones_FB/total_FB
             prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
-            #difference = prop_FB - prop_base
             difference = total_ones_base - total_ones_FB
             if total_FB == 0:
                 continue
@@ -317,12 +306,10 @@ class PPOAgent:
         state: tensor of shape (B, 1, 20, 20)
         action_indices: tensor containing 20 flat indices.
         """
-        contents = os.listdir(work_folder)
-        print(contents)
+        
        
         header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
-        print("Opened")
-        
+      
         H, W = grid.shape  # Assuming 20x20 grid
         rows = (action_indices // W).cpu().numpy()
         cols = (action_indices % W).cpu().numpy()
@@ -386,7 +373,6 @@ class PPOAgent:
             advantages (Tensor): shape (T,)
             returns (Tensor): shape (T,)
         """
-        print(rewards)
         T = rewards.shape[0]
         advantages = torch.zeros_like(rewards)
         gae = torch.zeros(1, device=self.device)
