@@ -302,12 +302,7 @@ class PPOAgent:
     
 
     def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
-        """
-        state: tensor of shape (B, 1, 20, 20)
-        action_indices: tensor containing 20 flat indices.
-        """
-        
-       
+    
         header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
       
         H, W = grid.shape  # Assuming 20x20 grid
@@ -411,8 +406,18 @@ class PPOAgent:
             for i in range(states.size(0)):
                 dist_i_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
                                          mask=masks[i:i+1] if masks is not None else None)
-                dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
-                new_log_probs.append(dist_i.log_prob(actions[i]).sum())
+                #dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
+                probs_i = F.softmax(dist_i_logits, dim=-1)
+                log_prob = 0
+                for action in actions[i]:
+                    action_idx = action.item()
+                    log_prob += torch.log(probs_i[0, action_idx] + 1e-10)
+                    probs_i[0, action_idx] = 0
+                    probs_i = probs_i / (probs_i.sum() + 1e-10)
+
+                #new_log_probs.append(dist_i.log_prob(actions[i]).sum())
+                new_log_probs.append(log_prob)
+
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
             delta_log = torch.clamp(new_log_probs - old_log_probs, -10, 10)

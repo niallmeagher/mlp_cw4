@@ -21,7 +21,7 @@ username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
 HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
 
-
+'''
 def save_checkpoint(agent, epoch, checkpoint_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
@@ -92,7 +92,7 @@ def load_checkpoint(agent, checkpoint_path):
     start_epoch = checkpoint["epoch"]
     print(f"Resuming training from epoch {start_epoch}")
     return start_epoch
-'''
+
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
     """
     Clears folder1, randomly selects a CSV from folder2, copies it to folder1,
@@ -165,7 +165,7 @@ def read_multi_channel_asc(files, header_lines=6):
 
 def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
-    print("initial")
+  
     episode_id = uuid.uuid4().hex
     testing = "/tmp/"
     #temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id} /", dir = HOME_DIR)
@@ -181,11 +181,11 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         print("Error during copytree:", e)
         raise
     
-    print("initial2")
+    
     try:
         action_indices, log_prob, value, _ = agent.select_action(state, tabular_tensor, mask)
         true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_work_dir, output_folder = temp_output_dir, output_folder_base = temp_output_base_dir)
-        print("Tried", action_indices, true_reward)
+        
         if true_reward is None: # Check if reward is None
             print("Warning: Reward is None from simulate_fire_episode. Episode failed.")
             shutil.rmtree(temp_work_dir, ignore_errors=True) # Clean up work folder if episode failed
@@ -198,7 +198,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         shutil.rmtree(temp_work_dir, ignore_errors=True)
         shutil.rmtree(temp_output_dir, ignore_errors=True)
         shutil.rmtree(temp_output_base_dir, ignore_errors=True)
-        print("Finally")
+       
         if os.path.exists(temp_work_dir):
            print(f"Warning: Work folder already exists before creation: {temp_work_dir}. This should not happen with UUIDs.")
        # print("DELETED", os.listdir(temp_work_dir))
@@ -341,14 +341,13 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
         '''
-        print("EPISODES:", episodes_per_epoch)
         start_time = time.time()
         with TPE(max_workers=mp.cpu_count()) as executor:
-            print("Executing")
+            
             futures = [executor.submit(simulate_single_episode, agent,
                                    tensor_input.clone(), tabular_tensor, mask, input_folder_final)
                    for _ in range(episodes_per_epoch)]
-            print("Done", futures)
+           
             results = [future.result() for future in futures]
         nones = 0
         for res in results:
