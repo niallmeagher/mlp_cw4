@@ -32,16 +32,16 @@ class ActorCriticNetwork(nn.Module):
 
         # Actor branch: expects flattened feature size of 16 * 4 * 4 = 256
         self.actor_fc1 = nn.Linear(combined_feature_size, 512)
-        self.bn1 = nn.BatchNorm1d(512)
+        self.bn1 = nn.LayerNorm(512)
         self.actor_fc2 = nn.Linear(512, 128)
-        self.bn2 = nn.BatchNorm1d(128)
+        self.bn2 = nn.LayerNorm(128)
         self.actor_out = nn.Linear(128, num_actions)
 
         # Critic branch: same input dimensions
         self.critic_fc1 = nn.Linear(combined_feature_size, 512)
-        self.bn1_2 = nn.BatchNorm1d(512)
+        self.bn1_2 = nn.LayerNorm(512)
         self.critic_fc2 = nn.Linear(512, 128)
-        self.bn2_2 = nn.BatchNorm1d(128)
+        self.bn2_2 = nn.LayerNorm(128)
         self.critic_out = nn.Linear(128, 1)
 
     def forward(self, x, tabular =None, mask=None):
