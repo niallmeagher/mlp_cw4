@@ -339,13 +339,14 @@ class PPOAgent:
 
         probs = F.softmax(dist.logits, dim=-1)
         reshaped_probs= probs.reshape(20, 20)
-        '''
-        probs = probs.reshape(20, 20)
-        flat_logits = dist.logits.flatten()
-        topk_values, topk_indices = torch.topk(flat_logits, k=20)
-        log_prob = dist.log_prob(topk_indices).sum()
-        return topk_indices, log_prob, value, probs
-        '''
+        
+        probs2 = probs.reshape(20, 20)
+        flat_logits2 = dist.logits.flatten()
+        topk_values2, topk_indices2 = torch.topk(flat_logits2, k=20)
+        log_prob2 = dist.log_prob(topk_indices2).sum()
+        print(topk_indices2, log_prob2, value, probs2)
+        #return topk_indices, log_prob, value, probs
+        
         remaining_probs = probs.clone()
         log_prob = 0
         selected_indices = []
@@ -371,6 +372,7 @@ class PPOAgent:
             remaining_probs = remaining_probs / (remaining_probs.sum() + 1e-10)
     
         topk_indices = torch.tensor(selected_indices, device=self.device)
+        print("TOPK", topk_indices, log_prob, value, reshaped_probs)
         return topk_indices, log_prob, value, reshaped_probs
 
     def reward_function(self, state, action):
@@ -423,7 +425,7 @@ class PPOAgent:
             next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
 
         advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
-        print(advantages,returns)
+       # print(advantages,returns)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         advantages = advantages.detach()
         scaler = GradScaler()
@@ -450,16 +452,16 @@ class PPOAgent:
             new_log_probs = torch.stack(new_log_probs)
             entropy = dist.entropy().mean()
             delta_log = torch.clamp(new_log_probs - old_log_probs, -10, 10)
-            print("PROBS", new_log_probs, old_log_probs,new_log_probs -old_log_probs, torch.exp(new_log_probs -old_log_probs) )
+           # print("PROBS", new_log_probs, old_log_probs,new_log_probs -old_log_probs, torch.exp(new_log_probs -old_log_probs) )
             ratio = torch.exp(delta_log)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
-            print("RATIOS:", surr1, surr2, ratio, advantages)
+          #  print("RATIOS:", surr1, surr2, ratio, advantages)
             policy_loss = -torch.min(surr1, surr2).mean()
 
             value_loss = F.mse_loss(values.squeeze(-1), returns)
             loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
-            print(policy_loss, self.value_loss_coef, value_loss, self.entropy_coef, entropy)
+          #  print(policy_loss, self.value_loss_coef, value_loss, self.entropy_coef, entropy)
 
             #self.optimizer.zero_grad()
             #loss.backward()
