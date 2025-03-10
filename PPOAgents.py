@@ -356,12 +356,25 @@ class PPOAgent:
         actor_logits = actor_logits.clone().detach().float().contiguous().to(self.device)
         std =  torch.full(size=(actor_logits.shape), fill_value=0.5, device = self.device)
         cov_matrix = torch.diag_embed(std).detach().to(self.device)
-        dist = MultivariateNormal(actor_logits, covariance_matrix=cov_matrix)
+        dist = torch.distributions.Normal(actor_logits, covariance_matrix=cov_matrix)
+        mean = torch.sigmoid(actor_logits)  # Convert to [0,1] range
+    
+    # Create a diagonal covariance matrix (we'll use a fixed standard deviation)
+        std = 0.1  # You can adjust this value to control exploration
+        cov_matrix = torch.eye(mean.shape[1], device=self.device) * (std ** 2)
+    
+    # Create the multivariate normal distribution
+        dist = MultivariateNormal(mean, cov_matrix)
+    
+    # Sample from the distribution
+    
     
     # Create the multivariate normal distribution.
         
     # Sample a continuous action vector.
         continuous_action = dist.sample()  # shape: (1, num_actions)
+        if mask is not None:
+            continuous_action = continuous_action * mask
     
     # Extract top 20 values (and their indices) along the action dimension.
         topk_values, topk_indices = torch.topk(continuous_action, k=20, dim=1)
@@ -370,6 +383,7 @@ class PPOAgent:
     # Compute the log probability of the entire continuous sample.
         log_prob = dist.log_prob(continuous_action)
         continuous_action = continuous_action.squeeze(0)
+        continuous_action = mean.reshape(20, 20)
 
         return action_indices, log_prob, value, continuous_action
     '''
@@ -515,13 +529,29 @@ class PPOAgent:
             '''
 
            # new_log_probs = torch.stack(new_log_probs)
-            mean = actor_logits  # new means for each sample
-            std = torch.ones_like(mean)  # fixed std (same as in select_action)
-            cov_matrix = torch.diag_embed(std ** 2)
-            dist = torch.distributions.MultivariateNormal(mean, covariance_matrix=cov_matrix)
+            means = torch.sigmoid(actor_logits)
         
-        # Evaluate the log probability of the stored continuous actions under the new policy.
-            new_log_probs = dist.log_prob(continuous_actions)
+        # Create covariance matrices (diagonal with fixed std)
+            std = 0.1  # Same as in select_action
+            batch_size = means.size(0)
+            action_dim = means.size(1)
+            cov_matrices = torch.eye(action_dim, device=self.device).unsqueeze(0).repeat(batch_size, 1, 1) * (std ** 2)
+        
+        # Create distributions for each item in the batch
+            new_log_probs = []
+            for i in range(batch_size):
+                dist = MultivariateNormal(means[i], cov_matrices[i])
+            # Flatten the actions to match the distribution
+                actions_flat = torch.zeros(action_dim, device=self.device)
+            # Set the values at topk_indices to 1 (or another appropriate value)
+                for idx in actions[i]:
+                    actions_flat[idx] = 1.0
+            
+            # Calculate log probability
+                log_prob = dist.log_prob(actions_flat)
+                new_log_probs.append(log_prob)
+
+            new_log_probs = torch.stack(new_log_probs)
             
            # new_log_probs = dist.log_prob(actions).sum(dim=1)
             entropy = dist.entropy().mean()
