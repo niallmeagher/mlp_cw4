@@ -353,10 +353,10 @@ class PPOAgent:
         log_probs = dist.log_prob(action_indices)
         log_prob = log_probs.sum()  # Sum log probabilities
         '''
-        actor_logits = actor_logits.clone().detach().float().contiguous().to(self.device)
-        std =  torch.full(size=(actor_logits.shape), fill_value=0.5, device = self.device)
-        cov_matrix = torch.diag_embed(std).detach().to(self.device)
-        dist = torch.distributions.Normal(actor_logits, covariance_matrix=cov_matrix)
+        #actor_logits = actor_logits.clone().detach().float().contiguous().to(self.device)
+        #std =  torch.full(size=(actor_logits.shape), fill_value=0.5, device = self.device)
+        #cov_matrix = torch.diag_embed(std).detach().to(self.device)
+        #dist = torch.distributions.Normal(actor_logits, covariance_matrix=cov_matrix)
         mean = torch.sigmoid(actor_logits)  # Convert to [0,1] range
     
     # Create a diagonal covariance matrix (we'll use a fixed standard deviation)
