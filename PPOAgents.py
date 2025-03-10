@@ -585,7 +585,7 @@ class PPOAgent:
             # Compute log probability of this continuous action
                # state_log_prob = state_dist.log_prob(continuous_action).sum()
                 #new_log_probs.append(state_log_prob)
-                original_action = trajectories['continuous_actions'][i]
+                original_action = continuous_actions[i]
                 new_log_probs.append(state_dist.log_prob(original_action).sum())
         
             new_log_probs = torch.stack(new_log_probs)
