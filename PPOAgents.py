@@ -359,11 +359,12 @@ class PPOAgent:
         for _ in range(20):  # Select 20 indices
         # Get the current highest probability index
             if mask is not None:
-                masked_probs = remaining_probs * flat_mask
+                masked_probs = flat_probs * flat_mask
             else:
                 masked_probs = remaining_probs
             
             _, index = torch.max(masked_probs, dim=0)
+            print(_, index)
             
             index = index.item()
         
