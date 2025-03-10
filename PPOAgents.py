@@ -510,6 +510,17 @@ class PPOAgent:
         for _ in range(self.update_epochs):
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
             dist2 = Categorical(logits=actor_logits)
+        
+            means = torch.sigmoid(actor_logits)
+    
+        # Create covariance matrices (diagonal with fixed std)
+            std = 0.1  # Same as in select_action
+            batch_size = means.size(0)
+            action_dim = means.size(1)
+        
+        # Creating batched actions tensor for vectorized computation
+            actions_flat = torch.zeros(batch_size, action_dim, device=self.device)
+        
             '''
             new_log_probs = []
             for i in range(states.size(0)):
@@ -529,32 +540,20 @@ class PPOAgent:
             '''
 
            # new_log_probs = torch.stack(new_log_probs)
-            means = torch.sigmoid(actor_logits)
-        
-        # Create covariance matrices (diagonal with fixed std)
-            std = 0.1  # Same as in select_action
-            batch_size = means.size(0)
-            action_dim = means.size(1)
-            cov_matrices = torch.eye(action_dim, device=self.device).unsqueeze(0).repeat(batch_size, 1, 1) * (std ** 2)
-        
+            for i in range(batch_size):
+                for idx in actions[i]:
+                    actions_flat[i, idx] = 1.0
         # Create distributions for each item in the batch
+            
             new_log_probs = []
             for i in range(batch_size):
-                dist = MultivariateNormal(means[i], cov_matrices[i])
-            # Flatten the actions to match the distribution
-                actions_flat = torch.zeros(action_dim, device=self.device)
-            # Set the values at topk_indices to 1 (or another appropriate value)
-                for idx in actions[i]:
-                    actions_flat[idx] = 1.0
-            
-            # Calculate log probability
-                log_prob = dist.log_prob(actions_flat)
+                cov_matrix = torch.eye(action_dim, device=self.device) * (std ** 2)
+                dist = MultivariateNormal(means[i], cov_matrix)
+                log_prob = dist.log_prob(actions_flat[i])
                 new_log_probs.append(log_prob)
-
-            new_log_probs = torch.stack(new_log_probs)
-            
            # new_log_probs = dist.log_prob(actions).sum(dim=1)
-            entropy = dist.entropy().mean()
+            new_log_probs = torch.stack(new_log_probs)
+            entropy = dist2.entropy().mean()
             delta_log = torch.clamp(new_log_probs - old_log_probs, -10, 10)
             print("PROBS", new_log_probs, old_log_probs,new_log_probs -old_log_probs, torch.exp(new_log_probs -old_log_probs) )
             ratio = torch.exp(delta_log)
