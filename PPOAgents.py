@@ -608,6 +608,7 @@ class PPOAgent:
         # Optimize
             self.optimizer.zero_grad()
             scaler.scale(loss).backward()
+            torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
             scaler.step(self.optimizer)
             scaler.update()
         

@@ -32,12 +32,16 @@ class ActorCriticNetwork(nn.Module):
 
         # Actor branch: expects flattened feature size of 16 * 4 * 4 = 256
         self.actor_fc1 = nn.Linear(combined_feature_size, 512)
+        self.bn1 = nn.BatchNorm1d(512)
         self.actor_fc2 = nn.Linear(512, 128)
+        self.bn2 = nn.BatchNorm1d(128)
         self.actor_out = nn.Linear(128, num_actions)
 
         # Critic branch: same input dimensions
         self.critic_fc1 = nn.Linear(combined_feature_size, 512)
+        self.bn1_2 = nn.BatchNorm1d(512)
         self.critic_fc2 = nn.Linear(512, 128)
+        self.bn2_2 = nn.BatchNorm1d(128)
         self.critic_out = nn.Linear(128, 1)
 
     def forward(self, x, tabular =None, mask=None):
@@ -63,6 +67,7 @@ class ActorCriticNetwork(nn.Module):
             combined = x
         # Actor branch
         actor_hidden = F.relu(self.actor_fc1(combined))
+        actor_hidden = self.bn1(actor_hidden)
         actor_hidden = F.relu(self.actor_fc2(actor_hidden))
         actor_logits = self.actor_out(actor_hidden)  # (B, num_actions)
         actor_logits = actor_logits
@@ -72,6 +77,7 @@ class ActorCriticNetwork(nn.Module):
 
         # Critic branch
         critic_hidden = F.relu(self.critic_fc1(combined))
+        critic_hidden = self.bn1_2(critic_hidden)
         critic_hidden = F.relu(self.critic_fc2(critic_hidden))
         value = self.critic_out(critic_hidden)  # (B, 1)
 
