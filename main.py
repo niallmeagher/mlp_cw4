@@ -1,6 +1,7 @@
 import os
 import glob
 import torch
+import torch.nn as nn
 import shutil
 import numpy as np
 import csv
