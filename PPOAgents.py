@@ -585,8 +585,8 @@ class PPOAgent:
                 #original_action = continuous_actions[i]
                 #new_log_probs.append(state_dist.log_prob(original_action).sum())
                 #Convert to probabilities
-
-                new_probs = F.softmax(continuous_actions[i], dim=1)
+                state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],mask=masks[i:i+1] if masks is not None else None)
+                new_probs = F.softmax(state_logits, dim=1)
                 new_dist = Categorical(probs=new_probs)
         
         # Compute new log probs for the stored actions (shape: B x 20)
