@@ -369,13 +369,13 @@ class PPOAgent:
         return action_indices, log_prob, value, continuous_action
     '''
     def select_action(self, state, weather=None, mask=None):
-       # """
-       # Returns:
-       #     action_indices: tensor of shape (20,) containing the selected 20 indices.
-       #     log_prob: aggregated log probability for the 20 selected actions.
-       #     value: critic value for the state.
-       #     probs: reshaped probabilities grid (20 x 20) for reference.
-       # """
+        '''
+        Returns:
+            action_indices: tensor of shape (20,) containing the selected 20 indices.
+            log_prob: aggregated log probability for the 20 selected actions.
+            value: critic value for the state.
+            probs: reshaped probabilities grid (20 x 20) for reference.
+        '''
         state = state.to(self.device)
         if mask is None:
             mask = torch.ones(1,400)           
@@ -389,7 +389,8 @@ class PPOAgent:
             dist, value = self.network(state, tabular=weather, mask=mask)
             flat_logits = dist.logits.flatten()
             _, top_index = torch.topk(flat_logits, k=1)
-            topk_indices.append(top_index[0])
+            top_index = top_index.int()
+            topk_indices.append(top_index)
 
             # Update state
             update_row, update_col = top_index // state.shape[3], top_index % state.shape[3]
