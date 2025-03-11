@@ -429,7 +429,8 @@ class PPOAgent:
         '''
         probs = F.softmax(actor_logits, dim=1)
         num_samples = 20
-        topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=True)
+        topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
+        topk_indices = topk_indices.squeeze(0)
         dist = Categorical(probs=probs)
         log_prob = dist.log_prob(topk_indices).sum(dim=1)
      
