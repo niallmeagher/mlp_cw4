@@ -432,7 +432,7 @@ class PPOAgent:
         topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
         topk_indices = topk_indices.squeeze(0)
         dist = Categorical(probs=probs)
-        log_prob = dist.log_prob(topk_indices).sum(dim=1)
+        log_prob = dist.log_prob(topk_indices).sum()
      
         #return topk_indices, log_prob, value, continuous_action
         return topk_indices, log_prob, value, actor_logits
@@ -590,7 +590,7 @@ class PPOAgent:
                 new_dist = Categorical(probs=new_probs)
         
         # Compute new log probs for the stored actions (shape: B x 20)
-                new_log_probs.append(new_dist.log_prob(actions[i]).sum(dim=1))
+                new_log_probs.append(new_dist.log_prob(actions[i]).sum())
         
             new_log_probs = torch.stack(new_log_probs)
         
