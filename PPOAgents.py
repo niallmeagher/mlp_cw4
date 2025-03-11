@@ -556,7 +556,7 @@ class PPOAgent:
             next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
 
         advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
-        print("RETURNS:", returns)
+       # print("RETURNS:", returns)
         returns = (returns - returns.mean()) / (returns.std() + 1e-8)
         returns = returns.detach()
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
@@ -608,7 +608,7 @@ class PPOAgent:
             policy_loss = -torch.min(surr1, surr2).mean()
         
         # Value loss
-            print(returns, values)
+          #  print(returns, values)
             value_loss = F.mse_loss(values.squeeze(-1), returns)
         
         # Combined loss
