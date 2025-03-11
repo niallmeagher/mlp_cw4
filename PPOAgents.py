@@ -19,6 +19,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.cuda.amp import autocast, GradScaler
 from concurrent.futures import ProcessPoolExecutor as PPE
 from concurrent.futures import ThreadPoolExecutor as TPE
+from torch.distributions import MultivariateNormal
 import multiprocessing as mp
 username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
@@ -54,7 +55,7 @@ class RewardFunction(nn.Module):
 class PPOAgent:
     
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.1,
-                 value_loss_coef=0.5, entropy_coef=0.1, gamma=0.99, update_epochs=5, learned_reward=False):
+                 value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -68,7 +69,9 @@ class PPOAgent:
         self.new_folder = new_folder
         self.output_folder = output_folder
         self.output_folder_base = output_folder_base
+
         self.num_gpus = torch.cuda.device_count()
+        
         if self.num_gpus > 1:
             self.network = nn.DataParallel(self.network)
         self.network.to(self.device)
@@ -172,9 +175,8 @@ class PPOAgent:
             EF = str(1.2)
 
         def run_command(command):
-            result = subprocess.run(command, check=False,  # Set check=False to avoid raising exception immediately
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            text=True)
+            result = subprocess.run(command, check=True,  # Set check=False to avoid raising exception immediately
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
                 print(f"Command failed: {command}")
                 print("Stdout:", result.stdout)
@@ -225,17 +227,13 @@ class PPOAgent:
                 "--BFactor", BF,
                 "--EFactor", EF
             ]
-            print(cmd, cmd_base)
             if parallel == False:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 with TPE(max_workers=mp.cpu_count()) as executor:
-                    print("SUCCESS")
-                    future1 = executor.submit(run_command, cmd)
-                    print("SUCCESS1")
-                    future2 = executor.submit(run_command, cmd_base)
-                    print("SUCCESS2")
+                    future1 = executor.submit(run_command, cmd)           
+                    future2 = executor.submit(run_command, cmd_base)          
                     concurrent.futures.wait([future1, future2])
 
         except subprocess.CalledProcessError as e:
@@ -244,13 +242,8 @@ class PPOAgent:
             return None
         
         base_grids_folder = os.path.join(output_folder_base, "Grids")
-        print(os.listdir(output_folder),os.listdir(output_folder_base))
-        contents2 = os.listdir(base_grids_folder)
-        print(contents2)
         firebreak_grids_folder = os.path.join(output_folder, "Grids")
         computed_values = []
-        contents = os.listdir(firebreak_grids_folder)
-        print(contents)
         
         for i in range(1, num_grids + 1):
             csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
@@ -276,7 +269,6 @@ class PPOAgent:
             total_FB = total_ones_FB + total_zeros_FB
             prop_ones_FB = total_ones_FB/total_FB
             prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
-            #difference = prop_FB - prop_base
             difference = total_ones_base - total_ones_FB
             if total_FB == 0:
                 continue
@@ -305,16 +297,9 @@ class PPOAgent:
     
 
     def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
-        """
-        state: tensor of shape (B, 1, 20, 20)
-        action_indices: tensor containing 20 flat indices.
-        """
-        contents = os.listdir(work_folder)
-        print(contents)
-       
+    
         header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
-        print("Opened")
-        
+      
         H, W = grid.shape  # Assuming 20x20 grid
         rows = (action_indices // W).cpu().numpy()
         cols = (action_indices % W).cpu().numpy()
@@ -328,15 +313,60 @@ class PPOAgent:
                                                             work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
         
         return reward
+    '''
+    def select_action(self, state, weather=None, mask=None):
+    
+        state = state.to(self.device)
+        if mask is not None:
+            mask = mask.to(self.device)
+        if weather is not None:
+           weather = weather.to(self.device)
+
+    # Forward pass to get actor logits and value
+        actor_logits, value = self.network(state, tabular=weather, mask=mask)
+        
+        #actor_logits = actor_logits.clone().detach().float().contiguous().to(self.device)
+        #std =  torch.full(size=(actor_logits.shape), fill_value=0.5, device = self.device)
+        #cov_matrix = torch.diag_embed(std).detach().to(self.device)
+        #dist = torch.distributions.Normal(actor_logits, covariance_matrix=cov_matrix)
+        mean = torch.sigmoid(actor_logits)  # Convert to [0,1] range
+    
+    # Create a diagonal covariance matrix (we'll use a fixed standard deviation)
+        std = 0.1  # You can adjust this value to control exploration
+        cov_matrix = torch.eye(mean.shape[1], device=self.device) * (std ** 2)
+    
+    # Create the multivariate normal distribution
+        dist = torch.distributions.Normal(mean, cov_matrix)
+    
+    # Sample from the distribution
+    
+    
+    # Create the multivariate normal distribution.
+        
+    # Sample a continuous action vector.
+        continuous_action = dist.sample()  # shape: (1, num_actions)
+        if mask is not None:
+            continuous_action = continuous_action * mask
+    
+    # Extract top 20 values (and their indices) along the action dimension.
+        topk_values, topk_indices = torch.topk(continuous_action, k=20, dim=1)
+        action_indices= topk_indices.squeeze(0)
+    
+    # Compute the log probability of the entire continuous sample.
+        log_prob = dist.log_prob(continuous_action)
+        continuous_action = continuous_action.squeeze(0)
+        continuous_action = mean.reshape(20, 20)
+
+        return action_indices, log_prob, value, continuous_action
     
     def select_action(self, state, weather=None, mask=None):
-        """
-        Returns:
-            action_indices: tensor of shape (20,) containing the selected 20 indices.
-            log_prob: aggregated log probability for the 20 selected actions.
-            value: critic value for the state.
-            probs: reshaped probabilities grid (20 x 20) for reference.
-        """
+       # """
+       # Returns:
+       #     action_indices: tensor of shape (20,) containing the selected 20 indices.
+       #     log_prob: aggregated log probability for the 20 selected actions.
+       #     value: critic value for the state.
+       #     probs: reshaped probabilities grid (20 x 20) for reference.
+       # """
         state = state.to(self.device)
         if mask is not None:
             mask = mask.to(self.device)
@@ -348,11 +378,58 @@ class PPOAgent:
         dist = Categorical(logits=actor_logits)
 
         probs = F.softmax(dist.logits, dim=-1)
+        
         probs = probs.reshape(20, 20)
         flat_logits = dist.logits.flatten()
         topk_values, topk_indices = torch.topk(flat_logits, k=20)
         log_prob = dist.log_prob(topk_indices).sum()
+        #print("Before", topk_indices2, log_prob2, value, probs2)
         return topk_indices, log_prob, value, probs
+    '''
+    def select_action(self, state, weather=None, mask=None):
+        state = state.to(self.device)
+        if mask is not None:
+            mask = mask.to(self.device)
+        if weather is not None:
+            weather = weather.to(self.device)
+
+    # Forward pass to get actor logits and value
+        actor_logits, value = self.network(state, tabular=weather, mask=mask)
+        '''
+    # Use actor_logits as the mean of a distribution
+        mean = torch.sigmoid(actor_logits)  # Convert to [0,1] range
+    
+    # Fixed standard deviation for exploration control
+        std = 0.1
+    
+    # Create normal distribution
+        dist = torch.distributions.Normal(mean, std)
+    
+    # Sample from the distribution
+        continuous_action = dist.sample()  # shape: (batch_size, num_actions)
+    
+    # Apply mask if provided
+        if mask is not None:
+            continuous_action = continuous_action * mask
+    
+    # Extract top 20 values and their indices
+        topk_values, topk_indices = torch.topk(continuous_action, k=20, dim=1)
+        topk_indices = topk_indices.squeeze(0)
+    
+    # Compute log probability of the entire continuous sample
+        log_prob = dist.log_prob(continuous_action).sum()
+        '''
+        probs = F.softmax(actor_logits, dim=1)
+        num_samples = 20
+        topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
+        topk_indices = topk_indices.squeeze(0)
+        dist = Categorical(probs=probs)
+        log_prob = dist.log_prob(topk_indices).sum()
+     
+        #return topk_indices, log_prob, value, continuous_action
+        return topk_indices, log_prob, value, actor_logits
+        
+        
 
     def reward_function(self, state, action):
         if self.learned_reward:
@@ -378,7 +455,6 @@ class PPOAgent:
             advantages (Tensor): shape (T,)
             returns (Tensor): shape (T,)
         """
-        print(rewards)
         T = rewards.shape[0]
         advantages = torch.zeros_like(rewards)
         gae = torch.zeros(1, device=self.device)
@@ -390,6 +466,7 @@ class PPOAgent:
             advantages[t] = gae
         returns = advantages + values
         return advantages, returns
+    '''
 
     def update(self, trajectories):
         states = trajectories['states'].to(self.device)
@@ -405,33 +482,37 @@ class PPOAgent:
             next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
 
         advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
-        print(advantages,returns)
+       # print(advantages,returns)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
         advantages = advantages.detach()
         scaler = GradScaler()
 
         for _ in range(self.update_epochs):
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
-            dist = Categorical(logits=actor_logits)
+            dist2 = Categorical(logits=actor_logits)
+        
             new_log_probs = []
             for i in range(states.size(0)):
                 dist_i_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],
                                          mask=masks[i:i+1] if masks is not None else None)
                 dist_i = Categorical(logits=dist_i_logits) # Create Categorical distribution here
                 new_log_probs.append(dist_i.log_prob(actions[i]).sum())
+            
+
             new_log_probs = torch.stack(new_log_probs)
-            entropy = dist.entropy().mean()
+           
+            entropy = dist2.entropy().mean()
             delta_log = torch.clamp(new_log_probs - old_log_probs, -10, 10)
             print("PROBS", new_log_probs, old_log_probs,new_log_probs -old_log_probs, torch.exp(new_log_probs -old_log_probs) )
             ratio = torch.exp(delta_log)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
-            print("RATIOS:", surr1, surr2, ratio, advantages)
+          #  print("RATIOS:", surr1, surr2, ratio, advantages)
             policy_loss = -torch.min(surr1, surr2).mean()
 
             value_loss = F.mse_loss(values.squeeze(-1), returns)
             loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
-            print(policy_loss, self.value_loss_coef, value_loss, self.entropy_coef, entropy)
+            print("LOSS", policy_loss, self.value_loss_coef, value_loss, self.entropy_coef, entropy)
 
             #self.optimizer.zero_grad()
             #loss.backward()
@@ -440,7 +521,7 @@ class PPOAgent:
             #print("LOSS", loss)
             self.optimizer.zero_grad()
             scaler.scale(loss).backward()
-            torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
+            #torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
             scaler.step(self.optimizer)
             scaler.update()
 
@@ -451,6 +532,88 @@ class PPOAgent:
             self.reward_optimizer.zero_grad()
             reward_loss.backward()
             self.reward_optimizer.step()
+    '''
+    def update(self, trajectories):
+        states = trajectories['states'].to(self.device)
+        masks = trajectories['masks'].to(self.device)
+        weather = trajectories['weather'].to(self.device)
+        actions = trajectories['actions'].to(self.device)
+        continuous_actions = trajectories['continuous_action'].to(self.device)
+        old_log_probs = trajectories['log_probs'].to(self.device).detach()
+        rewards = trajectories['rewards'].to(self.device)
+        dones = trajectories['dones'].to(self.device)
+        old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
+
+        with torch.no_grad():
+            next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
+
+        advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
+       # print("RETURNS:", returns)
+        returns = (returns - returns.mean()) / (returns.std() + 1e-8)
+        returns = returns.detach()
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        advantages = advantages.detach()
+        returns = (returns - returns.mean()) / (returns.std() + 1e-8)
+        scaler = GradScaler()
+
+        for _ in range(self.update_epochs):
+        # Get current logits and values from the network
+            actor_logits, values = self.network(states, tabular=weather, mask=masks)
+            dist_softmax = F.softmax(actor_logits,dim=1)
+            dist = Categorical(probs = dist_softmax)
+        
+        # Use actor_logits as mean for distribution
+            #mean = torch.sigmoid(actor_logits)
+            #std = 0.1
+        
+        # Create normal distribution for each state
+            #dist = torch.distributions.Normal(mean, std)
+        
+        # Calculate new log probabilities
+            new_log_probs = []
+            for i in range(states.size(0)):
+            # Get mean for this state
+                #state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1], 
+                 #                        mask=masks[i:i+1] if masks is not None else None)
+                #state_mean = torch.sigmoid(state_logits)
+            
+                #state_dist = torch.distributions.Normal(state_mean, std)
+                #original_action = continuous_actions[i]
+                #new_log_probs.append(state_dist.log_prob(original_action).sum())
+                #Convert to probabilities
+                state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],mask=masks[i:i+1] if masks is not None else None)
+                new_probs = F.softmax(state_logits, dim=1)
+                new_dist = Categorical(probs=new_probs)
+        
+        # Compute new log probs for the stored actions (shape: B x 20)
+                new_log_probs.append(new_dist.log_prob(actions[i]).sum())
+        
+            new_log_probs = torch.stack(new_log_probs)
+        
+        # Calculate entropy (optional, can be modified for Normal distribution)
+            #entropy = -(mean * torch.log(mean + 1e-8) + (1 - mean) * torch.log(1 - mean + 1e-8)).mean()
+            entropy = dist.entropy().mean()
+        # Calculate ratio and clipped objective for PPO
+            ratio = torch.exp(new_log_probs - old_log_probs)
+            surr1 = ratio * advantages
+            surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
+            policy_loss = -torch.min(surr1, surr2).mean()
+        
+        # Value loss
+          #  print(returns, values)
+            value_loss = F.mse_loss(values.squeeze(-1), returns)
+        
+        # Combined loss
+            loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
+        
+        # Optimize
+            self.optimizer.zero_grad()
+            scaler.scale(loss).backward()
+            torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
+            scaler.step(self.optimizer)
+            scaler.update()
+        
+            print("LOSS", policy_loss.item(), self.value_loss_coef, value_loss.item(), self.entropy_coef, entropy.item())
 
     def simulate_test_episode(self, state, action):
         TARGET_ACTION = 200

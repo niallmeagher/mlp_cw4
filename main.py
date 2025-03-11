@@ -1,6 +1,7 @@
 import os
 import glob
 import torch
+import torch.nn as nn
 import shutil
 import numpy as np
 import argparse
@@ -164,7 +165,7 @@ def read_multi_channel_asc(files, header_lines=6):
 
 def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
-    print("initial")
+  
     episode_id = uuid.uuid4().hex
     testing = "/tmp/"
     #temp_work_dir = tempfile.mkdtemp(prefix=f"cell2fire_input_{episode_id} /", dir = HOME_DIR)
@@ -180,11 +181,11 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         print("Error during copytree:", e)
         raise
     
-    print("initial2")
+    
     try:
-        action_indices, log_prob, value, _ = agent.select_action(state, tabular_tensor, mask)
+        action_indices, log_prob, value, continuous_action = agent.select_action(state, tabular_tensor, mask)
         true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_work_dir, output_folder = temp_output_dir, output_folder_base = temp_output_base_dir)
-        print("Tried", action_indices, true_reward)
+        
         if true_reward is None: # Check if reward is None
             print("Warning: Reward is None from simulate_fire_episode. Episode failed.")
             shutil.rmtree(temp_work_dir, ignore_errors=True) # Clean up work folder if episode failed
@@ -197,7 +198,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         shutil.rmtree(temp_work_dir, ignore_errors=True)
         shutil.rmtree(temp_output_dir, ignore_errors=True)
         shutil.rmtree(temp_output_base_dir, ignore_errors=True)
-        print("Finally")
+       
         if os.path.exists(temp_work_dir):
            print(f"Warning: Work folder already exists before creation: {temp_work_dir}. This should not happen with UUIDs.")
        # print("DELETED", os.listdir(temp_work_dir))
@@ -212,7 +213,8 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         'done': done,
         'weather': tabular_tensor.detach(),
         'mask': mask.detach(),
-        'true_reward': torch.tensor([true_reward], dtype=torch.float32)
+        'true_reward': torch.tensor([true_reward], dtype=torch.float32),
+        'continuous_action': continuous_action.detach()
     }
     
 
@@ -256,22 +258,25 @@ def main(args, start_epoch=0, checkpoint_path=None):
         f"{input_dir}/slope.asc"
     ]
     tensor_input = read_multi_channel_asc(files)
-    # Build a mask for valid actions from the first channel.
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
+<<<<<<< HEAD
 
    # print(mask)
+=======
+>>>>>>> Matthews_code
     for epoch in range(start_epoch, num_epochs):
         trajectories = {
             'states': [],
-            'actions': [],       # will store tensors of shape (20,)
+            'actions': [],
             'log_probs': [],
             'values': [],
             'rewards': [],
             'dones': [],
             'masks': [],
             'true_rewards': [],
-            'weather': []
+            'weather': [],
+            'continuous_action': []
         }
         epoch_rewards = []
         epoch_values = []
@@ -326,14 +331,13 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
         '''
-        print("EPISODES:", episodes_per_epoch)
         start_time = time.time()
         with TPE(max_workers=mp.cpu_count()) as executor:
-            print("Executing")
+            
             futures = [executor.submit(simulate_single_episode, agent,
                                    tensor_input.clone(), tabular_tensor, mask, input_folder_final)
                    for _ in range(episodes_per_epoch)]
-            print("Done", futures)
+           
             results = [future.result() for future in futures]
         nones = 0
         for res in results:
@@ -348,6 +352,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
             trajectories['dones'].append(res['done'])
             trajectories['weather'].append(res['weather'])
             trajectories['masks'].append(res['mask'])
+            trajectories['continuous_action'].append(res['continuous_action'])
             trajectories['true_rewards'].append(res['true_reward'])
             total_reward += res['reward'].item()
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
@@ -355,10 +360,11 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['log_probs'] = torch.stack(trajectories['log_probs'], dim=0)
         trajectories['values'] = torch.cat(trajectories['values'], dim=0)
         trajectories['rewards'] = torch.cat(trajectories['rewards'], dim=0).squeeze(-1)
-        rewards = (trajectories['rewards'] - trajectories['rewards'].mean()) / (trajectories['rewards'].std() + 1e-8)
-        trajectories['rewards'] = rewards
+      #  rewards = (trajectories['rewards'] - trajectories['rewards'].mean()) / (trajectories['rewards'].std() + 1e-8)
+      #  trajectories['rewards'] = rewards
         trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
+        trajectories['continuous_action'] = torch.cat(trajectories['continuous_action'], dim=0)
         trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
 
