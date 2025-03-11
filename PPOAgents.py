@@ -316,10 +316,18 @@ class PPOAgent:
         return reward
     '''
     def select_action(self, state, weather=None, mask=None):
-    
+            """
+        Returns:
+            action_indices: tensor of shape (20,) containing the selected 20 indices.
+            log_prob: aggregated log probability for the 20 selected actions.
+            value: critic value for the state.
+            probs: reshaped probabilities grid (20 x 20) for reference.
+        """
         state = state.to(self.device)
-        if mask is not None:
-            mask = mask.to(self.device)
+        if mask is None:
+            mask = torch.ones(1,400)           
+        mask = mask.to(self.device)
+        
         if weather is not None:
            weather = weather.to(self.device)
 
