@@ -403,7 +403,7 @@ class PPOAgent:
 
     # Forward pass to get actor logits and value
         actor_logits, value = self.network(state, tabular=weather, mask=mask)
-    
+        '''
     # Use actor_logits as the mean of a distribution
         mean = torch.sigmoid(actor_logits)  # Convert to [0,1] range
     
@@ -426,8 +426,15 @@ class PPOAgent:
     
     # Compute log probability of the entire continuous sample
         log_prob = dist.log_prob(continuous_action).sum()
-    
-        return topk_indices, log_prob, value, continuous_action
+        '''
+        probs = F.softmax(actor_logits, dim=1)
+        num_samples = 20
+        topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=True)
+        dist = Categorical(probs=probs)
+        log_prob = dist.log_prob(topk_indices).sum(dim=1)
+     
+        #return topk_indices, log_prob, value, continuous_action
+        return topk_indices, log_prob, value, actor_logits
         
         
 
@@ -555,44 +562,40 @@ class PPOAgent:
         for _ in range(self.update_epochs):
         # Get current logits and values from the network
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
+            dist_softmax = F.softmax(actor_logits,dim=1)
+            dist = Categorical(probs = dist_softmax)
         
         # Use actor_logits as mean for distribution
-            mean = torch.sigmoid(actor_logits)
-            std = 0.1
+            #mean = torch.sigmoid(actor_logits)
+            #std = 0.1
         
         # Create normal distribution for each state
-            dist = torch.distributions.Normal(mean, std)
+            #dist = torch.distributions.Normal(mean, std)
         
         # Calculate new log probabilities
             new_log_probs = []
             for i in range(states.size(0)):
             # Get mean for this state
-                state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1], 
-                                         mask=masks[i:i+1] if masks is not None else None)
-                state_mean = torch.sigmoid(state_logits)
+                #state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1], 
+                 #                        mask=masks[i:i+1] if masks is not None else None)
+                #state_mean = torch.sigmoid(state_logits)
             
-            # Create distribution
-                state_dist = torch.distributions.Normal(state_mean, std)
-            
-            # Create a sample based on the action indices
-            # We need to reconstruct the continuous action that would have led to these indices
-               # continuous_action = torch.zeros_like(state_mean)
-            
-            # Set values at the selected indices
-                #for idx in actions[i]:
-                #    continuous_action.flatten()[idx] = 1.0
-                
-            # Compute log probability of this continuous action
-               # state_log_prob = state_dist.log_prob(continuous_action).sum()
-                #new_log_probs.append(state_log_prob)
-                original_action = continuous_actions[i]
-                new_log_probs.append(state_dist.log_prob(original_action).sum())
+                #state_dist = torch.distributions.Normal(state_mean, std)
+                #original_action = continuous_actions[i]
+                #new_log_probs.append(state_dist.log_prob(original_action).sum())
+                #Convert to probabilities
+
+                new_probs = F.softmax(continuous_actions[i], dim=1)
+                new_dist = Categorical(probs=new_probs)
+        
+        # Compute new log probs for the stored actions (shape: B x 20)
+                new_log_probs.append(new_dist.log_prob(actions[i]).sum(dim=1))
         
             new_log_probs = torch.stack(new_log_probs)
         
         # Calculate entropy (optional, can be modified for Normal distribution)
-            entropy = -(mean * torch.log(mean + 1e-8) + (1 - mean) * torch.log(1 - mean + 1e-8)).mean()
-        
+            #entropy = -(mean * torch.log(mean + 1e-8) + (1 - mean) * torch.log(1 - mean + 1e-8)).mean()
+            entropy = dist.entropy().mean()
         # Calculate ratio and clipped objective for PPO
             ratio = torch.exp(new_log_probs - old_log_probs)
             surr1 = ratio * advantages
