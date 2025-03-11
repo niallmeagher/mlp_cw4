@@ -147,9 +147,15 @@ echo "Command ran successfully!"
 
 echo "Moving output data back to DFS"
 
-src_path=${OutputFileDirectory}
+
+Output=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20_Test/Checkpoints
+results = ${SCRATCH_HOME}/Cell2Fire/results/episode_results.csv
+results2 = ${SCRATCH_HOME}/Cell2Fire/results/Epoch_Stats.csv
+src_path=${Output}
 dest_path=${data_path}/mlp_cw4/results/$4
 rsync  --archive --update --compress --progress ${src_path}/ ${dest_path}
+rsync  --archive --update --compress --progress ${results}/ ${dest_path}
+rsync  --archive --update --compress --progress ${results2}/ ${dest_path}
 
 # Delete folders from scratch space
 rm -rf ${SCRATCH_HOME}

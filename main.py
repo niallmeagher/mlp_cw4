@@ -22,33 +22,7 @@ username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
 HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
 
-'''
-def save_checkpoint(agent, epoch, checkpoint_dir):
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
-    checkpoint = {
-        "epoch": epoch,
-        "model_state_dict": agent.network.state_dict(),
-        "optimizer_state_dict": agent.optimizer.state_dict(),
-        "learned_reward": agent.learned_reward
-    }
-    # Save the reward network if you're using one.
-    if agent.learned_reward and agent.reward_net is not None:
-        checkpoint["reward_net_state_dict"] = agent.reward_net.state_dict()
-    torch.save(checkpoint, checkpoint_path)
-    print(f"Checkpoint saved at {checkpoint_path}")
 
-
-def load_checkpoint(agent, checkpoint_path):
-    checkpoint = torch.load(checkpoint_path, map_location=agent.device)
-    agent.network.load_state_dict(checkpoint["model_state_dict"])
-    agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    if agent.learned_reward and "reward_net_state_dict" in checkpoint:
-        agent.reward_net.load_state_dict(checkpoint["reward_net_state_dict"])
-    start_epoch = checkpoint["epoch"]
-    print(f"Resuming training from epoch {start_epoch}")
-    return start_epoch
-'''
 def save_checkpoint(agent, epoch, checkpoint_dir):
     """Save training checkpoint with model state"""
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -61,7 +35,8 @@ def save_checkpoint(agent, epoch, checkpoint_dir):
         "epoch": epoch,
         "model_state_dict": model_state_dict,
         "optimizer_state_dict": agent.optimizer.state_dict(),
-        "learned_reward": agent.learned_reward
+        "learned_reward": agent.learned_reward,
+        "scheduler_state_dict": agent.scheduler.state_dict() if agent.scheduler else None
     }
     
     if agent.learned_reward and agent.reward_net is not None:
@@ -89,25 +64,15 @@ def load_checkpoint(agent, checkpoint_path):
             agent.reward_net.module.load_state_dict(checkpoint["reward_net_state_dict"])
         else:
             agent.reward_net.load_state_dict(checkpoint["reward_net_state_dict"])
+    if agent.scheduler and "scheduler_state_dict" in checkpoint:
+        agent.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
             
     start_epoch = checkpoint["epoch"]
     print(f"Resuming training from epoch {start_epoch}")
     return start_epoch
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
-    """
-    Clears folder1, randomly selects a CSV from folder2, copies it to folder1,
-    and returns the CSV data as a PyTorch tensor after optionally skipping the header and dropping the first N columns.
-
-    Args:
-        folder1 (str): Path to the destination folder (will be cleared).
-        folder2 (str): Path to the folder containing CSV files.
-        drop_first_n_cols (int): Number of columns to drop from the left (default: 2).
-        has_header (bool): If True, skips the first row of the CSV.
-
-    Returns:
-        torch.Tensor: Data from the CSV as a tensor of type torch.float32.
-    """
+   
     os.makedirs(folder1, exist_ok=True)
     
     for filename in os.listdir(folder1):
@@ -237,8 +202,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
     #if not os.path.exists(output_dir):
        # os.makedirs(output_dir)
 
-    output_file = open(f'{output_dir}v2/losses.csv','w')
-    output_file.write('epoch,reward\n')
+    output_file = open(f'{HOME_DIR2}/Epoch_Stats.csv','w')
+    output_file.write('epoch,reward,loss,policy_loss,value_loss,entropy\n')
 
     # Hyperparameters
     num_epochs = int(args['num_epochs'])
@@ -253,7 +218,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
                      input_channels=4, learned_reward=False)
     
-    csv_file = "episode_results.csv"
+    csvf = "episode_results.csv"
+    csv_file = os.path.join(f"{HOME_DIR2}",csvf)
     if not os.path.exists(csv_file):
         with open(csv_file, "w", newline="") as f:
             writer = csv.writer(f)
@@ -380,7 +346,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
 
 
-        agent.update(trajectories)
+        avg_loss, avg_policy_loss, avg_value_loss, avg_entropy = agent.update(trajectories)
         avg_reward = (total_reward) / (episodes_per_epoch -nones )
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
         with open(csv_file, "a", newline="") as f:
@@ -389,6 +355,9 @@ def main(args, start_epoch=0, checkpoint_path=None):
                 identifier = f"Epoch_{epoch+1}_Episode_{ep+1}"
                 writer.writerow([identifier, r, v])
         save_checkpoint(agent, epoch+1, checkpoint_dir = f"{input_dir}_Test/Checkpoints")
+        avg_loss, avg_policy_loss, avg_value_loss, avg_entropy = agent.update(trajectories)
+        output_file.write(f"{epoch+1},{avg_reward:.4f},{avg_loss:.4f},{avg_policy_loss:.4f},{avg_value_loss:.4f},{avg_entropy:.4f}\n")
+        output_file.flush() 
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Elapsed time: {elapsed_time:.4f} seconds")
@@ -416,6 +385,8 @@ if __name__ == '__main__':
     parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)
     parser.add_argument('-i','--input_dir', help='Path to folder containing input data', required=True)
     parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
+    parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
+    parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
     args = vars(parser.parse_args())
     main(args,start_epoch=0, checkpoint_path=checkpoint_file)
     
