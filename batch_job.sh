@@ -115,7 +115,8 @@ data_path=/home/${USER}
 
 # send over both mlp_cw4 and Cell2Fire folders
 
-rsync --archive --update --compress --progress ${data_path}/ ${SCRATCH_HOME}
+rsync --archive --update --compress --progress ${data_path}/mlp_cw4 ${SCRATCH_HOME}
+rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_HOME}
 
 
 # ==============================
@@ -128,8 +129,8 @@ rsync --archive --update --compress --progress ${data_path}/ ${SCRATCH_HOME}
 
 NumEpochs=$1 # eg 1000
 NumEpisodes=$2 # eg 3
-InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/$3 # eg Sub20x20
-OutputFileDirectory=${SCRATCH_HOME}/$4 # eg Sub20x20
+InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20$3 # eg Sub20x20
+OutputFileDirectory=${SCRATCH_HOME}/Cell2Fire/results/Sub20x20$4 # eg Sub20x20
 
 COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}""
 echo "Running provided command: ${COMMAND}"
@@ -150,13 +151,11 @@ dest_path=${data_path}/mlp_cw4/results/$4
 rsync  --archive --update --compress --progress ${src_path}/ ${dest_path}
 
 # Delete folders from scratch space
-rm -rf ${SCRATCH_HOME}/
+rm -rf ${SCRATCH_HOME}
 
 # =========================
 # Post experiment logging
 # =========================
 echo ""
-echo "============"
-echo "job finished successfully"
 dt=$(date '+%d/%m/%Y %H:%M:%S')
 echo "Job finished: $dt"

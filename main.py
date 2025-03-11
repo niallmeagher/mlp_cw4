@@ -5,6 +5,9 @@ import shutil
 import numpy as np
 import argparse
 import csv
+import argparse
+import tempfile
+from concurrent.futures import ThreadPoolExecutor as TPE
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
@@ -13,7 +16,7 @@ username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'cell2fire', 'Cell2FireC') + '/'
 
 
-def save_checkpoint(agent, epoch, checkpoint_dir=f"{HOME_DIR}/data/Sub20x20_Test/Checkpoints"):
+def save_checkpoint(agent, epoch, checkpoint_dir):
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
     checkpoint = {
@@ -110,25 +113,48 @@ def read_multi_channel_asc(files, header_lines=6):
         tensors.append(torch.tensor(grid_np))
     return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20, 20)
 
+def simulate_single_episode(agent, state, tabular_tensor, mask):
+    # Create a temporary working directory for this episode
+    temp_dir = tempfile.mkdtemp(prefix="cell2fire_")
+    try:
+        action_indices, log_prob, value, _ = agent.select_action(state, tabular_tensor, mask)
+        true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_dir)
+    finally:
+        # Clean up the temporary folder after simulation
+        shutil.rmtree(temp_dir)
+    done = torch.tensor(1, dtype=torch.float32, device=agent.device)
+    return {
+        'state': state,
+        'action': action_indices,
+        'log_prob': log_prob,
+        'value': value,
+        'reward': torch.tensor([true_reward], dtype=torch.float32),
+        'done': done,
+        'weather': tabular_tensor,
+        'mask': mask,
+        'true_reward': torch.tensor([true_reward], dtype=torch.float32)
+    }
 
-def main(args):
-    # Data folders
+def main(args, start_epoch=0, checkpoint_path=None):
     input_dir = args['input_dir'] # e.g Sub20x20
     output_dir = args['output_dir']
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    checkpoint_path = args['checkpoint_path']
-    start_epoch = args['start_epoch']
+    #if not os.path.exists(output_dir):
+       # os.makedirs(output_dir)
 
-    output_file = open(f'{output_dir}/losses.csv','w')
+    output_file = open(f'{output_dir}v2/losses.csv','w')
     output_file.write('epoch,reward\n')
 
     # Hyperparameters
-    num_epochs = int(args['num_epochs'])          # Number of PPO update cycles
-    episodes_per_epoch = int(args['episodes'])    # Number of episodes (trajectories) to collect per update
+    num_epochs = int(args['num_epochs'])
+    episodes_per_epoch = int(args['episodes'])
 
     # Initialize PPO Agent (update input channels if needed)
-    agent = PPOAgent(input_folder=f'{input_dir}/', new_folder=f'{input_dir}_Test/', output_folder=f'{output_dir}',
+    new_folder=f'{input_dir}_Test/'
+    input_folder=f'{input_dir}/'
+    output_folder=f'{output_dir}v2'
+    output_folder_base=f'{output_dir}_base/'
+    #agent = PPOAgent(input_channels=4, learned_reward=False)
+    agent = PPOAgent(input_folder, new_folder, output_folder,output_folder_base,
                      input_channels=4, learned_reward=False)
     
     csv_file = "episode_results.csv"
@@ -170,16 +196,16 @@ def main(args):
         epoch_values = []
             
         total_reward = 0.0
-
-        # create weathers_stored folder if necessary
+    
         folder_sample_from = os.path.join(input_dir, "Weathers")
         folder_stored = os.path.join(input_dir, "Weathers_Stored")
         if os.path.exists(folder_sample_from) and not os.path.exists(folder_stored):
             os.rename(folder_sample_from, folder_stored)
-
         tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
-        
+        epoch_rewards = []
+        epoch_values = []
+        '''
         for episode in range(episodes_per_epoch):
             
             state = tensor_input.clone()
@@ -190,7 +216,7 @@ def main(args):
             print("Value", value)
             
             # Simulate the fire episode to get the true reward.
-            true_reward = agent.simulate_fire_episode(state[:,0:1,:,:], action_indices)
+            true_reward = agent.simulate_fire_episode(action_indices)
             total_reward += true_reward
             epoch_rewards.append(float(true_reward))
             epoch_values.append(float(value.item()))
@@ -207,7 +233,7 @@ def main(args):
             trajectories['weather'].append(tabular_tensor)
             trajectories['masks'].append(valid_actions_mask)
             trajectories['true_rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
-            # print(valid_actions_mask.shape)
+           # print(valid_actions_mask.shape)
         
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'])  # shape (episodes, 20)
@@ -218,6 +244,34 @@ def main(args):
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
         trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
+        '''
+        with TPE(max_workers=episodes_per_epoch) as executor:
+            futures = [executor.submit(simulate_single_episode, agent,
+                                   tensor_input.clone(), tabular_tensor, mask)
+                   for _ in range(episodes_per_epoch)]
+            results = [future.result() for future in futures]
+
+        for res in results:
+            trajectories['states'].append(res['state'])
+            trajectories['actions'].append(res['action'])
+            trajectories['log_probs'].append(res['log_prob'])
+            trajectories['values'].append(res['value'])
+            trajectories['rewards'].append(res['reward'])
+            trajectories['dones'].append(res['done'])
+            trajectories['weather'].append(res['weather'])
+            trajectories['masks'].append(res['mask'])
+            trajectories['true_rewards'].append(res['true_reward'])
+            total_reward += res['reward'].item()
+        trajectories['states'] = torch.cat(trajectories['states'], dim=0)
+        trajectories['actions'] = torch.stack(trajectories['actions'], dim=0)
+        trajectories['log_probs'] = torch.stack(trajectories['log_probs'], dim=0)
+        trajectories['values'] = torch.cat(trajectories['values'], dim=0)
+        trajectories['rewards'] = torch.cat(trajectories['rewards'], dim=0).squeeze(-1)
+        trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
+        trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
+        trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
+        trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
+
 
         agent.update(trajectories)
         avg_reward = total_reward / episodes_per_epoch
@@ -225,14 +279,12 @@ def main(args):
 
         output_file.write(f"{epoch+1},{avg_reward:.4f}\n")
 
-        test_state = torch.zeros(1, 4, 20, 20)
-
         with open(csv_file, "a", newline="") as f:
             writer = csv.writer(f)
-            for ep in range(episodes_per_epoch):
+            for ep, (r, v) in enumerate(zip(epoch_rewards, epoch_values)):
                 identifier = f"Epoch_{epoch+1}_Episode_{ep+1}"
-                writer.writerow([identifier, epoch_rewards[ep], epoch_values[ep]])
-        save_checkpoint(agent, epoch+1)
+                writer.writerow([identifier, r, v])
+        save_checkpoint(agent, epoch+1, checkpoint_dir = f"{input_dir}_Test/Checkpoints")
     
 
     final_path = "final_model.pt"
@@ -255,7 +307,6 @@ def main(args):
 
 if __name__ == '__main__':
     checkpoint_file = None  # Replace with your file path if needed.
-    
     parser = argparse.ArgumentParser()
     parser.add_argument('-n','--num_epochs', help='Number of taining epochs to perform', required=True)
     parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)

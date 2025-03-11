@@ -9,4 +9,3 @@ OutputFileDirectory=""
 
 # Call the Python script with arguments
 python "$Dir/main.py" --epochs $NumEpochs --episodes $NumEpisodes --input_dir "$InputFileDirectory" --output_dir "$OutputFileDirectory"
-
