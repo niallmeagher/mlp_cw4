@@ -445,7 +445,7 @@ class PPOAgent:
             flat_actions = actions.view(-1)
             new_log_probs = []
             for i in range(batch_size):
-                batch_actions = flat_actions[i]  # Get all actions for this state
+                batch_actions = actions[i]  # Get all actions for this state
                 state_probs = dist_softmax[i:i+1]  # Get probabilities for this state
                 state_dist = Categorical(probs=state_probs)
             # Calculate log prob for each action and sum them
