@@ -484,19 +484,13 @@ class PPOAgent:
             mask = mask.to(self.device)
         if weather is not None:
             weather = weather.to(self.device)
-
-    # Forward pass to get actor logits and value
-        actor_logits, value = self.network(state, tabular=weather, mask=mask)
-<<<<<<< HEAD
-       
-=======
         
->>>>>>> Matthews_code
-        probs = F.softmax(actor_logits, dim=1)
-        num_samples = 20
-        topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
-        topk_indices = topk_indices.squeeze(0)
-        dist = Categorical(probs=probs)
+
+        dist, value = self.network(state, tabular=weather, mask=mask)
+        probs = F.softmax(dist, dim=-1)
+        probs = probs.reshape(20, 20)
+        flat_logits = dist.logits.flatten()
+        topk_values, topk_indices = torch.topk(flat_logits, k=20)
         log_prob = dist.log_prob(topk_indices).sum()
      
         #return topk_indices, log_prob, value, continuous_action
