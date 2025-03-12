@@ -260,11 +260,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     tensor_input = read_multi_channel_asc(files)
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
-<<<<<<< HEAD
 
-   # print(mask)
-=======
->>>>>>> Matthews_code
     for epoch in range(start_epoch, num_epochs):
         trajectories = {
             'states': [],
