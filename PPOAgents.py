@@ -473,7 +473,7 @@ class PPOAgent:
         
 
         dist, value = self.network(state, tabular=weather, mask=mask)
-        probs = F.softmax(dist.logits, dim=-1)
+        probs = F.softmax(dist, dim=-1)
         probs = probs.reshape(20, 20)
         flat_logits = dist.logits.flatten()
         topk_values, topk_indices = torch.topk(flat_logits, k=20)
