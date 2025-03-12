@@ -549,10 +549,9 @@ class PPOAgent:
                 state = torch.tensor(state, dtype = torch.float32).to(self.device)
                 action = torch.tensor(action, dtype=torch.long).to(self.device)
                 tabular = torch.zeros(1, 8, 11).to(self.device)
-                dist, _ =  self.network(state, tabular = tabular)
-                logits = dist.logits
+                action_logits, value =  self.network(state, tabular = tabular)
 
-                logits_expanded = logits.repeat(action.size(0), 1)
+                logits_expanded = action_logits.repeat(action.size(0), 1)
                 action_loss = F.cross_entropy(logits_expanded, action)
 
                 demonstrator_logits = logits_expanded.gather(1, action.unsqueeze(1))
