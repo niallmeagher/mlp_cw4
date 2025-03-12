@@ -71,11 +71,6 @@ def load_checkpoint(agent, checkpoint_path):
     return start_epoch
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
-<<<<<<< HEAD
- 
-=======
-   
->>>>>>> Matthews_code
     os.makedirs(folder1, exist_ok=True)
     
     for filename in os.listdir(folder1):
@@ -385,12 +380,7 @@ if __name__ == '__main__':
     parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)
     parser.add_argument('-i','--input_dir', help='Path to folder containing input data', required=True)
     parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
-<<<<<<< HEAD
-    parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
-    parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
-=======
    # parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
    # parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
->>>>>>> Matthews_code
     args = vars(parser.parse_args())
     main(args)
