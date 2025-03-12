@@ -21,33 +21,7 @@ username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
 HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
 
-'''
-def save_checkpoint(agent, epoch, checkpoint_dir):
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
-    checkpoint = {
-        "epoch": epoch,
-        "model_state_dict": agent.network.state_dict(),
-        "optimizer_state_dict": agent.optimizer.state_dict(),
-        "learned_reward": agent.learned_reward
-    }
-    # Save the reward network if you're using one.
-    if agent.learned_reward and agent.reward_net is not None:
-        checkpoint["reward_net_state_dict"] = agent.reward_net.state_dict()
-    torch.save(checkpoint, checkpoint_path)
-    print(f"Checkpoint saved at {checkpoint_path}")
 
-
-def load_checkpoint(agent, checkpoint_path):
-    checkpoint = torch.load(checkpoint_path, map_location=agent.device)
-    agent.network.load_state_dict(checkpoint["model_state_dict"])
-    agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    if agent.learned_reward and "reward_net_state_dict" in checkpoint:
-        agent.reward_net.load_state_dict(checkpoint["reward_net_state_dict"])
-    start_epoch = checkpoint["epoch"]
-    print(f"Resuming training from epoch {start_epoch}")
-    return start_epoch
-'''
 def save_checkpoint(agent, epoch, checkpoint_dir):
     """Save training checkpoint with model state"""
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -94,19 +68,7 @@ def load_checkpoint(agent, checkpoint_path):
     return start_epoch
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
-    """
-    Clears folder1, randomly selects a CSV from folder2, copies it to folder1,
-    and returns the CSV data as a PyTorch tensor after optionally skipping the header and dropping the first N columns.
-
-    Args:
-        folder1 (str): Path to the destination folder (will be cleared).
-        folder2 (str): Path to the folder containing CSV files.
-        drop_first_n_cols (int): Number of columns to drop from the left (default: 2).
-        has_header (bool): If True, skips the first row of the CSV.
-
-    Returns:
-        torch.Tensor: Data from the CSV as a tensor of type torch.float32.
-    """
+ 
     os.makedirs(folder1, exist_ok=True)
     
     for filename in os.listdir(folder1):
@@ -260,11 +222,6 @@ def main(args, start_epoch=0, checkpoint_path=None):
     tensor_input = read_multi_channel_asc(files)
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
-<<<<<<< HEAD
-
-   # print(mask)
-=======
->>>>>>> Matthews_code
     for epoch in range(start_epoch, num_epochs):
         trajectories = {
             'states': [],
