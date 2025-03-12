@@ -17,6 +17,7 @@ import tempfile
 import concurrent.futures
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.cuda.amp import autocast, GradScaler
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from concurrent.futures import ProcessPoolExecutor as PPE
 from concurrent.futures import ThreadPoolExecutor as TPE
 from torch.distributions import MultivariateNormal
@@ -55,7 +56,7 @@ class RewardFunction(nn.Module):
 class PPOAgent:
     
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.1,
-                 value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False):
+                 value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type="cosine",T_max=10,eta_min=1e-5,):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -77,6 +78,16 @@ class PPOAgent:
         self.network.to(self.device)
 
         self.gae_lambda = 0.95
+
+        self.scheduler = None
+        if scheduler_type == "cosine":
+            self.scheduler = CosineAnnealingLR(
+                self.optimizer, T_max=T_max, eta_min=eta_min
+            )
+        elif scheduler_type == "step":
+            self.scheduler = torch.optim.lr_scheduler.StepLR(
+                self.optimizer, step_size=5, gamma=0.1
+            )
 
         if self.learned_reward:
             self.reward_net = RewardFunction(state_channels=input_channels, state_size=20, num_actions=num_actions).to(self.device)
@@ -313,7 +324,11 @@ class PPOAgent:
                                                             work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
         
         return reward
+<<<<<<< HEAD
    
+=======
+  
+>>>>>>> Matthews_code
     def select_action(self, state, weather=None, mask=None):
         state = state.to(self.device)
         if mask is not None:
@@ -323,7 +338,11 @@ class PPOAgent:
 
     # Forward pass to get actor logits and value
         actor_logits, value = self.network(state, tabular=weather, mask=mask)
+<<<<<<< HEAD
        
+=======
+        
+>>>>>>> Matthews_code
         probs = F.softmax(actor_logits, dim=1)
         num_samples = 20
         topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
@@ -371,7 +390,11 @@ class PPOAgent:
             advantages[t] = gae
         returns = advantages + values
         return advantages, returns
+<<<<<<< HEAD
    
+=======
+    
+>>>>>>> Matthews_code
     def update(self, trajectories):
         states = trajectories['states'].to(self.device)
         masks = trajectories['masks'].to(self.device)
@@ -394,23 +417,60 @@ class PPOAgent:
         advantages = advantages.detach()
         returns = (returns - returns.mean()) / (returns.std() + 1e-8)
         scaler = GradScaler()
+        policy_losses = []
+        value_losses = []
+        entropies = []
+        losses = []
 
         for _ in range(self.update_epochs):
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
             dist_softmax = F.softmax(actor_logits,dim=1)
             dist = Categorical(probs = dist_softmax)
+<<<<<<< HEAD
         
+=======
+            '''
+>>>>>>> Matthews_code
             new_log_probs = []
+            entropies2 = []
             for i in range(states.size(0)):
+<<<<<<< HEAD
+=======
+            
+>>>>>>> Matthews_code
                 state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],mask=masks[i:i+1] if masks is not None else None)
                 new_probs = F.softmax(state_logits, dim=1)
                 new_dist = Categorical(probs=new_probs)
         
                 new_log_probs.append(new_dist.log_prob(actions[i]).sum())
+                #For new entropy
+                entropies2.append(new_dist.entropy())
+        
+            new_log_probs = torch.stack(new_log_probs)
+            #New Entropy
+            entropy = torch.stack(entropies2).mean()
+            '''
+            
+            batch_size = states.size(0)
+            flat_actions = actions.view(-1)
+            new_log_probs = []
+            for i in range(batch_size):
+                batch_actions = actions[i]  # Get all actions for this state
+                state_probs = dist_softmax[i:i+1]  # Get probabilities for this state
+                state_dist = Categorical(probs=state_probs)
+            # Calculate log prob for each action and sum them
+                state_log_probs = state_dist.log_prob(batch_actions).sum()
+                new_log_probs.append(state_log_probs)
         
             new_log_probs = torch.stack(new_log_probs)
         
             entropy = dist.entropy().mean()
+<<<<<<< HEAD
+=======
+            
+            #For old entropy
+           # entropy = dist.entropy().mean()
+>>>>>>> Matthews_code
             ratio = torch.exp(new_log_probs - old_log_probs)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
@@ -426,8 +486,20 @@ class PPOAgent:
             torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
             scaler.step(self.optimizer)
             scaler.update()
+            if self.scheduler is not None:
+                self.scheduler.step()  # Update LR after each epoch
+            policy_losses.append(policy_loss.item())
+            value_losses.append(value_loss.item())
+            entropies.append(entropy.item())
+            losses.append(loss.item())
+
         
             print("LOSS", policy_loss.item(), self.value_loss_coef, value_loss.item(), self.entropy_coef, entropy.item())
+        avg_loss = np.mean(losses)
+        avg_policy_loss = np.mean(policy_losses)
+        avg_value_loss = np.mean(value_losses)
+        avg_entropy = np.mean(entropies)
+        return avg_loss, avg_policy_loss, avg_value_loss, avg_entropy
 
     def simulate_test_episode(self, state, action):
         TARGET_ACTION = 200
