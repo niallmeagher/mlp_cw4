@@ -186,8 +186,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
     #if not os.path.exists(output_dir):
        # os.makedirs(output_dir)
 
-    output_file = open(f'{output_dir}v2/losses.csv','w')
-    output_file.write('epoch,reward\n')
+    # output_file = open(f'{output_dir}v2/losses.csv','w')
+    # output_file.write('epoch,reward\n')
 
     # Hyperparameters
     num_epochs = int(args['num_epochs'])
@@ -200,7 +200,13 @@ def main(args, start_epoch=0, checkpoint_path=None):
     output_folder_base=f'{output_dir}_base/'
     #agent = PPOAgent(input_channels=4, learned_reward=False)
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
-                     input_channels=4, learned_reward=False)
+                     input_channels=4, learned_reward=True,
+                     lr=args['lr'],
+                     clip_epsilon=args['clip_epsilon'],
+                     value_loss_coef=args['value_loss_coef'],
+                     entropy_coef=args['entropy_coef'],
+                     gamma=args['gamma'],
+                     gae_lambda=args['gae_lambda'])
     
     csv_file = "episode_results.csv"
     if not os.path.exists(csv_file):
@@ -248,46 +254,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         tabular_tensor = tensor_data.view(1, 8, 11)
         epoch_rewards = []
         epoch_values = []
-        '''
-        for episode in range(episodes_per_epoch):
-            
-            state = tensor_input.clone()
-            valid_actions_mask = mask
-            
-            action_indices, log_prob, value, real_action = agent.select_action(state, tabular_tensor, valid_actions_mask)
-            
-            print("Value", value)
-            
-            # Simulate the fire episode to get the true reward.
-            true_reward = agent.simulate_fire_episode(action_indices)
-            total_reward += true_reward
-            epoch_rewards.append(float(true_reward))
-            epoch_values.append(float(value.item()))
-            
-            
-            # For a one-step episode, done is True.
-            done = torch.tensor(1, dtype=torch.float32, device=agent.device)
-            trajectories['states'].append(state)
-            trajectories['actions'].append(action_indices)  # store the 20 selected indices
-            trajectories['log_probs'].append(log_prob)
-            trajectories['values'].append(value)
-            trajectories['rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
-            trajectories['dones'].append(done)
-            trajectories['weather'].append(tabular_tensor)
-            trajectories['masks'].append(valid_actions_mask)
-            trajectories['true_rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
-           # print(valid_actions_mask.shape)
-        
-        trajectories['states'] = torch.cat(trajectories['states'], dim=0)
-        trajectories['actions'] = torch.stack(trajectories['actions'])  # shape (episodes, 20)
-        trajectories['log_probs'] = torch.stack(trajectories['log_probs'])
-        trajectories['values'] = torch.cat(trajectories['values'], dim=0)
-        trajectories['rewards'] = torch.cat(trajectories['rewards'], dim=0).squeeze(-1)
-        trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
-        trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
-        trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
-        trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
-        '''
+
         start_time = time.time()
         with TPE(max_workers=mp.cpu_count()) as executor:
             
@@ -317,8 +284,6 @@ def main(args, start_epoch=0, checkpoint_path=None):
         trajectories['log_probs'] = torch.stack(trajectories['log_probs'], dim=0)
         trajectories['values'] = torch.cat(trajectories['values'], dim=0)
         trajectories['rewards'] = torch.cat(trajectories['rewards'], dim=0).squeeze(-1)
-      #  rewards = (trajectories['rewards'] - trajectories['rewards'].mean()) / (trajectories['rewards'].std() + 1e-8)
-      #  trajectories['rewards'] = rewards
         trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
         trajectories['continuous_action'] = torch.cat(trajectories['continuous_action'], dim=0)
@@ -330,7 +295,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         avg_reward = (total_reward) / (episodes_per_epoch -nones )
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
 
-        output_file.write(f"{epoch+1},{avg_reward:.4f}\n")
+        # output_file.write(f"{epoch+1},{avg_reward:.4f}\n")
 
         with open(csv_file, "a", newline="") as f:
             writer = csv.writer(f)
@@ -346,20 +311,9 @@ def main(args, start_epoch=0, checkpoint_path=None):
     final_path = "final_model.pt"
     torch.save(agent.network.state_dict(), final_path)
     print(f"Final model saved at {final_path}")
-    output_file.close()
-    '''
-    test_state = torch.zeros(1, 1, 20, 20)
+    # output_file.close()
+    return avg_reward
 
-    test_mask = torch.ones(1, 400)
-    action_indices, log_prob, value, _ = agent.select_action(test_state,tabular_tensor,  mask=test_mask)
-    print("\nFinal Test:")
-    print(f"Chosen Action Indices: {action_indices}")
-    print(f"Estimated Value: {value.item():.4f}")
-    test_true_reward = agent.simulate_test_episode(test_state, action_indices[0])
-    print(f"Test True Reward: {test_true_reward.item():.4f}")
-    '''
-
-    
 
 if __name__ == '__main__':
     #mp.set_start_method('spawn', force=True)
