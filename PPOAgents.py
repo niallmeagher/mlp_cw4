@@ -659,7 +659,7 @@ class PPOAgent:
         return advantages, returns
 
 
-    def preTraining(self, demonstrations, num_epochs=100, margin = 0.1, l2_weight = 0.01):
+    def preTraining(self, demonstrations, num_epochs=1000, margin = 0.1, l2_weight = 0.01):
         optimizer = torch.optim.Adam(self.network.parameters(), lr=self.optimizer.param_groups[0]['lr'])
         for epoch in range(num_epochs):
             epochLoss = 0.0
