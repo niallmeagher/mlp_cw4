@@ -154,6 +154,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     agent = PPOAgent(input_folder, new_folder, output_folder,output_folder_base,
                      input_channels=4, learned_reward=False)
     
+
     csv_file = "episode_results.csv"
     if not os.path.exists(csv_file):
         with open(csv_file, "w", newline="") as f:
@@ -175,6 +176,9 @@ def main(args, start_epoch=0, checkpoint_path=None):
     # Build a mask for valid actions from the first channel.
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
+    
+    demonstrations = agent.generate_demonstrations(tensor_input, 100)
+    agent.preTraining(demonstrations)
 
    # print(mask)
     for epoch in range(start_epoch, num_epochs):

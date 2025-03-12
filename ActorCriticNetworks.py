@@ -41,6 +41,10 @@ class ActorCriticNetwork(nn.Module):
         self.critic_out = nn.Linear(128, 1)
 
     def forward(self, x, tabular =None, mask=None):
+        if x.dim() == 2:
+            x = x.unsqueeze(0).unsqueeze(0)
+        if x.dim() == 3:
+            x = x.unsqueeze(1)
         # Shared CNN forward pass
         x = x.float()
         x = self.conv1(x)

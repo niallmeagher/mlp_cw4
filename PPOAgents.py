@@ -142,9 +142,149 @@ class PPOAgent:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
      
-
-
+    def calculate_dpv(self, work_folder, num_simulations = 10):
+        dpv_values = np.zeros((20,20))
+        for n in range(num_simulations):
+            burned_cells = self.run_Cell2FireOnce_ReturnBurnMap(work_folder)
+            for i in range(20):
+                for j in range(20):
+                    if burned_cells[i,j] == 1:
+                        dpv_values[i,j] += 1
+            print("n:", n)
+        return dpv_values / num_simulations
     
+    def select_firebreaks_dpv(self, dpv_values, num_firebreaks = 20):
+        #flatten the dpv values
+        topk_indices = np.argsort(dpv_values.flatten())[-num_firebreaks:]
+        return topk_indices
+    
+    def generate_demonstrations(self, inputTensors, num_demos = 1000):
+        demonstrations = []
+        for n in range(num_demos):
+            state = inputTensors 
+            dpv_values = self.calculate_dpv(self.new_folder)
+            topk_indices = self.select_firebreaks_dpv(dpv_values)
+
+            demonstrations.append((state, topk_indices))
+            print("Demonstration:", n)
+        print("demonstrations generated")
+        return demonstrations
+
+    def calculate_burnedArea(self, grid):
+        flat_data = grid.flatten()
+        total_zeros = np.sum(flat_data == 0)
+        total_ones = np.sum(flat_data == 1)
+        total_base = total_ones + total_zeros
+        return total_ones
+
+    def run_Cell2FireOnceWithBreaks(self, topk_indices, work_folder = None):
+        work_folder = work_folder or self.new_folder
+        if not os.path.exists(work_folder):
+            try:
+                shutil.copytree(self.input_folder, work_folder)
+            except Exception as e:
+                print(f"Error copying folder: {e}")
+                return None
+        
+        self.modify_csv(os.path.join(self.input_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
+        self.modify_first_column(os.path.join(self.input_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
+        
+        try:
+            cmd = [
+                f"{HOME_DIR}./Cell2Fire",
+                "--input-instance-folder", self.new_folder,
+                "--output-folder", self.output_folder,
+                "--ignitions",
+                "--sim-years", str(1),
+                "--nsims", str(1),
+                "--grids", str(32),
+                "--final-grid",
+                "--Fire-Period-Length", str(1.0),
+                "--weather", "rows",
+                "--nweathers", str(1),
+                "--output-messages",
+                "--ROS-CV", str(0.0),
+                "--seed", str(1),
+                "--IgnitionRad", str(4),
+                "--HFactor", str(1.2),
+                "--FFactor", str(1.2),
+                "--BFactor", str(1.2),
+                "--EFactor", str(1.2)
+            ]
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError as e:
+            return None
+        
+        firebreak_grids_folder = os.path.join(self.output_folder, "Grids")
+        csv_file = os.path.join(firebreak_grids_folder, f"Grids{1}", "ForestGrid08.csv")
+        if os.path.exists(csv_file):
+            try:
+                data = np.loadtxt(csv_file, delimiter=',')
+            except Exception as e:
+                return None, None
+        return self.calculate_burnedArea(data), data
+
+    def run_Cell2FireOnce_ReturnBurnMap(self, work_folder = None, stochastic = True):
+        work_folder = work_folder or self.new_folder
+        if not os.path.exists(work_folder):
+            try:
+                shutil.copytree(self.input_folder, work_folder)
+            except Exception as e:
+                print(f"Error copying folder: {e}")
+                return None
+        
+        if stochastic == True:
+            FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
+            ROS = str(np.round(np.random.uniform(0.0, 1.0), 2))
+            IR = str(np.random.randint(1, 6))
+            HF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            FF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            BF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            EF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+        else:
+            FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
+            ROS = str(0.1)
+            IR = str(4)
+            HF = str(1.2)
+            FF = str(1.2)
+            BF = str(1.2)
+            EF = str(1.2)
+        
+        try:
+            cmd = [
+                f"{HOME_DIR}./Cell2Fire",
+                "--input-instance-folder", self.new_folder,
+                "--output-folder", self.output_folder,
+                "--ignitions",
+                "--sim-years", str(1),
+                "--nsims", str(1),
+                "--grids", str(32),
+                "--final-grid",
+                "--Fire-Period-Length", FPL,
+                "--weather", "rows",
+                "--nweathers", str(1),
+                "--output-messages",
+                "--ROS-CV", ROS,
+                "--seed", str(1),
+                "--IgnitionRad", IR,
+                "--HFactor", HF,
+                "--FFactor", FF,
+                "--BFactor", BF,
+                "--EFactor", EF
+            ]
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError as e:
+            return None
+        
+        firebreak_grids_folder = os.path.join(self.output_folder, "Grids")
+        csv_file = os.path.join(firebreak_grids_folder, f"Grids{1}", "ForestGrid08.csv")
+        if os.path.exists(csv_file):
+            try:
+                data = np.loadtxt(csv_file, delimiter=',')
+            except Exception as e:
+                return None
+        return data
+
 
     def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None):
         
@@ -376,6 +516,43 @@ class PPOAgent:
             advantages[t] = gae
         returns = advantages + values
         return advantages, returns
+
+
+    def preTraining(self, demonstrations, num_epochs=1000, margin = 0.1, l2_weight = 0.01):
+        optimizer = torch.optim.Adam(self.network.parameters(), lr=self.optimizer.param_groups[0]['lr'])
+        for epoch in range(num_epochs):
+            epochLoss = 0.0
+            for state, action in demonstrations:
+                state = torch.tensor(state, dtype = torch.float32).to(self.device)
+                action = torch.tensor(action, dtype=torch.long).to(self.device)
+                print(action)
+                tabular = torch.zeros(1, 8, 11).to(self.device)
+                dist, _ =  self.network(state, tabular = tabular)
+                logits = dist.logits
+                print(logits)
+                action_loss = F.cross_entropy(logits, action)
+
+                demonstrator_logits = logits.gather(1, action.unsqueeze(1))
+                otherLogits = logits.clone()
+                otherLogits.scatter_(1, action.unsqueeze(1), -1e10)
+
+                maxOtherLogits = otherLogits.max(dim=1)[0]
+
+                marginLoss = F.relu(maxOtherLogits - demonstrator_logits + margin).mean()
+
+                l2_loss = 0.0
+                for param in self.network.parameters():
+                    l2_loss += torch.norm(param, p=2)
+                loss = action_loss + marginLoss + l2_weight * l2_loss
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                epochLoss += loss.item()
+            avgLoss = epochLoss / len(demonstrations)
+            print(f"Epoch {epoch}, Loss: {avgLoss}")
+
+
 
     def update(self, trajectories):
         states = trajectories['states'].to(self.device)
