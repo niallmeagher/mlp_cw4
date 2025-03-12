@@ -425,7 +425,7 @@ class PPOAgent:
             dist = Categorical(probs = dist_softmax)
         
             new_log_probs = []
-            entropies = []
+            entropies2 = []
             for i in range(states.size(0)):
             
                 state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],mask=masks[i:i+1] if masks is not None else None)
@@ -433,7 +433,7 @@ class PPOAgent:
                 new_dist = Categorical(probs=new_probs)
         
                 new_log_probs.append(new_dist.log_prob(actions[i]).sum())
-                entropies.append(new_dist.entropy())
+                entropies2.append(new_dist.entropy())
         
             new_log_probs = torch.stack(new_log_probs)
             entropy = torch.mean(torch.stack(entropies)).to(self.device)
