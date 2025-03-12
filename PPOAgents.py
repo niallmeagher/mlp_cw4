@@ -424,22 +424,25 @@ class PPOAgent:
             dist_softmax = F.softmax(actor_logits,dim=1)
             dist = Categorical(probs = dist_softmax)
         
-            new_log_probs = []
+          #  new_log_probs = []
             entropies2 = []
-            for i in range(states.size(0)):
+          #  for i in range(states.size(0)):
             
-                state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],mask=masks[i:i+1] if masks is not None else None)
-                new_probs = F.softmax(state_logits, dim=1)
-                new_dist = Categorical(probs=new_probs)
+               # state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],mask=masks[i:i+1] if masks is not None else None)
+                #new_probs = F.softmax(state_logits, dim=1)
+                #new_dist = Categorical(probs=new_probs)
         
-                new_log_probs.append(new_dist.log_prob(actions[i]).sum())
-                entropies2.append(new_dist.entropy())
+                #new_log_probs.append(new_dist.log_prob(actions[i]).sum())
+                #For new entropy
+                #entropies2.append(new_dist.entropy())
         
-            new_log_probs = torch.stack(new_log_probs)
-            entropy = torch.stack(entropies2).mean()
-        
-            #entropy = -(mean * torch.log(mean + 1e-8) + (1 - mean) * torch.log(1 - mean + 1e-8)).mean()
-            #entropy = dist.entropy().mean()
+            #new_log_probs = torch.stack(new_log_probs)
+            new_log_probs = torch.stack(dist.log_prob(actions).sum())
+            #New Entropy
+            #entropy = torch.stack(entropies2).mean()
+            
+            #For old entropy
+            entropy = dist.entropy().mean()
             ratio = torch.exp(new_log_probs - old_log_probs)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
