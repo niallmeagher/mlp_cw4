@@ -437,7 +437,7 @@ class PPOAgent:
                 #entropies2.append(new_dist.entropy())
         
             #new_log_probs = torch.stack(new_log_probs)
-            new_log_probs = dist.log_prob(actions.squeeze(-1)).sum(dim = 1)
+            new_log_probs = dist.log_prob(actions.squeeze(-1)).sum()
             #New Entropy
             #entropy = torch.stack(entropies2).mean()
             
