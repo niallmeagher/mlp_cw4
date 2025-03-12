@@ -541,22 +541,22 @@ class PPOAgent:
         return advantages, returns
 
 
-    def preTraining(self, demonstrations, num_epochs=1000, margin = 0.1, l2_weight = 0.01):
+    def preTraining(self, demonstrations, num_epochs=100, margin = 0.1, l2_weight = 0.01):
         optimizer = torch.optim.Adam(self.network.parameters(), lr=self.optimizer.param_groups[0]['lr'])
         for epoch in range(num_epochs):
             epochLoss = 0.0
             for state, action in demonstrations:
                 state = torch.tensor(state, dtype = torch.float32).to(self.device)
                 action = torch.tensor(action, dtype=torch.long).to(self.device)
-                print(action)
                 tabular = torch.zeros(1, 8, 11).to(self.device)
                 dist, _ =  self.network(state, tabular = tabular)
                 logits = dist.logits
-                print(logits)
-                action_loss = F.cross_entropy(logits, action)
 
-                demonstrator_logits = logits.gather(1, action.unsqueeze(1))
-                otherLogits = logits.clone()
+                logits_expanded = logits.repeat(action.size(0), 1)
+                action_loss = F.cross_entropy(logits_expanded, action)
+
+                demonstrator_logits = logits_expanded.gather(1, action.unsqueeze(1))
+                otherLogits = logits_expanded.clone()
                 otherLogits.scatter_(1, action.unsqueeze(1), -1e10)
 
                 maxOtherLogits = otherLogits.max(dim=1)[0]
@@ -572,6 +572,7 @@ class PPOAgent:
                 loss.backward()
                 optimizer.step()
                 epochLoss += loss.item()
+            print(epoch)
             avgLoss = epochLoss / len(demonstrations)
             print(f"Epoch {epoch}, Loss: {avgLoss}")
 
