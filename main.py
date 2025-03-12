@@ -71,11 +71,19 @@ def load_checkpoint(agent, checkpoint_path):
     return start_epoch
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
-<<<<<<< HEAD
- 
-=======
-   
->>>>>>> Matthews_code
+    """
+    Clears folder1, randomly selects a CSV from folder2, copies it to folder1,
+    and returns the CSV data as a PyTorch tensor after optionally skipping the header and dropping the first N columns.
+
+    Args:
+        folder1 (str): Path to the destination folder (will be cleared).
+        folder2 (str): Path to the folder containing CSV files.
+        drop_first_n_cols (int): Number of columns to drop from the left (default: 2).
+        has_header (bool): If True, skips the first row of the CSV.
+
+    Returns:
+        torch.Tensor: Data from the CSV as a tensor of type torch.float32.
+    """
     os.makedirs(folder1, exist_ok=True)
     
     for filename in os.listdir(folder1):
@@ -209,8 +217,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
                      input_channels=4, learned_reward=False)
     
-    csvf = "episode_results.csv"
-    csv_file = os.path.join(f"{HOME_DIR2}",csvf)
+
+    csv_file = "episode_results.csv"
     if not os.path.exists(csv_file):
         with open(csv_file, "w", newline="") as f:
             writer = csv.writer(f)
@@ -230,6 +238,11 @@ def main(args, start_epoch=0, checkpoint_path=None):
     tensor_input = read_multi_channel_asc(files)
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
+    
+    demonstrations = agent.generate_demonstrations(tensor_input, 100)
+    agent.preTraining(demonstrations)
+
+   # print(mask)
     for epoch in range(start_epoch, num_epochs):
         trajectories = {
             'states': [],
@@ -380,12 +393,7 @@ if __name__ == '__main__':
     parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)
     parser.add_argument('-i','--input_dir', help='Path to folder containing input data', required=True)
     parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
-<<<<<<< HEAD
     parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
     parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
-=======
-   # parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
-   # parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
->>>>>>> Matthews_code
     args = vars(parser.parse_args())
     main(args)
