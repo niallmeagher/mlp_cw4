@@ -71,19 +71,6 @@ def load_checkpoint(agent, checkpoint_path):
     return start_epoch
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
-    """
-    Clears folder1, randomly selects a CSV from folder2, copies it to folder1,
-    and returns the CSV data as a PyTorch tensor after optionally skipping the header and dropping the first N columns.
-
-    Args:
-        folder1 (str): Path to the destination folder (will be cleared).
-        folder2 (str): Path to the folder containing CSV files.
-        drop_first_n_cols (int): Number of columns to drop from the left (default: 2).
-        has_header (bool): If True, skips the first row of the CSV.
-
-    Returns:
-        torch.Tensor: Data from the CSV as a tensor of type torch.float32.
-    """
     os.makedirs(folder1, exist_ok=True)
     
     for filename in os.listdir(folder1):
@@ -393,7 +380,7 @@ if __name__ == '__main__':
     parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)
     parser.add_argument('-i','--input_dir', help='Path to folder containing input data', required=True)
     parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
-    parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
-    parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
+   # parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
+   # parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
     args = vars(parser.parse_args())
     main(args)
