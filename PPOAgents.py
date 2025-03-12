@@ -436,7 +436,7 @@ class PPOAgent:
                 entropies.append(new_dist.entropy())
         
             new_log_probs = torch.stack(new_log_probs)
-            entropy = torch.mean(torch.stack(entropies))
+            entropy = torch.mean(torch.stack(entropies)).to(self.device)
         
             #entropy = -(mean * torch.log(mean + 1e-8) + (1 - mean) * torch.log(1 - mean + 1e-8)).mean()
             #entropy = dist.entropy().mean()
