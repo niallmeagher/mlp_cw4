@@ -205,6 +205,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
                      input_channels=4, learned_reward=False)
     
 
+
     csv_file = "episode_results.csv"
     if not os.path.exists(csv_file):
         with open(csv_file, "w", newline="") as f:

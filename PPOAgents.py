@@ -310,6 +310,122 @@ class PPOAgent:
         #output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
         num_grids = 10
         work_folder = work_folder or self.new_folder 
+
+        if not os.path.exists(work_folder):
+            try:
+                shutil.copytree(self.input_folder, work_folder)
+            except Exception as e:
+                print(f"Error copying folder: {e}")
+                return None
+        
+        self.modify_csv(os.path.join(self.input_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
+        self.modify_first_column(os.path.join(self.input_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
+        
+        try:
+            cmd = [
+                f"{HOME_DIR}./Cell2Fire",
+                "--input-instance-folder", self.new_folder,
+                "--output-folder", self.output_folder,
+                "--ignitions",
+                "--sim-years", str(1),
+                "--nsims", str(1),
+                "--grids", str(32),
+                "--final-grid",
+                "--Fire-Period-Length", str(1.0),
+                "--weather", "rows",
+                "--nweathers", str(1),
+                "--output-messages",
+                "--ROS-CV", str(0.0),
+                "--seed", str(1),
+                "--IgnitionRad", str(4),
+                "--HFactor", str(1.2),
+                "--FFactor", str(1.2),
+                "--BFactor", str(1.2),
+                "--EFactor", str(1.2)
+            ]
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError as e:
+            return None
+        
+        firebreak_grids_folder = os.path.join(self.output_folder, "Grids")
+        csv_file = os.path.join(firebreak_grids_folder, f"Grids{1}", "ForestGrid08.csv")
+        if os.path.exists(csv_file):
+            try:
+                data = np.loadtxt(csv_file, delimiter=',')
+            except Exception as e:
+                return None, None
+        return self.calculate_burnedArea(data), data
+
+    def run_Cell2FireOnce_ReturnBurnMap(self, work_folder = None, stochastic = True):
+        work_folder = work_folder or self.new_folder
+        if not os.path.exists(work_folder):
+            try:
+                shutil.copytree(self.input_folder, work_folder)
+            except Exception as e:
+                print(f"Error copying folder: {e}")
+                return None
+        
+        if stochastic == True:
+            FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
+            ROS = str(np.round(np.random.uniform(0.0, 1.0), 2))
+            IR = str(np.random.randint(1, 6))
+            HF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            FF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            BF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            EF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+        else:
+            FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
+            ROS = str(0.1)
+            IR = str(4)
+            HF = str(1.2)
+            FF = str(1.2)
+            BF = str(1.2)
+            EF = str(1.2)
+        
+        try:
+            cmd = [
+                f"{HOME_DIR}./Cell2Fire",
+                "--input-instance-folder", self.new_folder,
+                "--output-folder", self.output_folder,
+                "--ignitions",
+                "--sim-years", str(1),
+                "--nsims", str(1),
+                "--grids", str(32),
+                "--final-grid",
+                "--Fire-Period-Length", FPL,
+                "--weather", "rows",
+                "--nweathers", str(1),
+                "--output-messages",
+                "--ROS-CV", ROS,
+                "--seed", str(1),
+                "--IgnitionRad", IR,
+                "--HFactor", HF,
+                "--FFactor", FF,
+                "--BFactor", BF,
+                "--EFactor", EF
+            ]
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError as e:
+            return None
+        
+        firebreak_grids_folder = os.path.join(self.output_folder, "Grids")
+        csv_file = os.path.join(firebreak_grids_folder, f"Grids{1}", "ForestGrid08.csv")
+        if os.path.exists(csv_file):
+            try:
+                data = np.loadtxt(csv_file, delimiter=',')
+            except Exception as e:
+                return None
+        return data
+
+
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None):
+        
+        #input_folder = f"{HOME_DIR}/data/Sub20x20/"
+        #new_folder = f"{HOME_DIR}/data/Sub20x20_Test/"
+        #output_folder = f"{HOME_DIR}/results/Sub20x20v2"
+        #output_folder_base = f"{HOME_DIR}/results/Sub20x20_base"
+        num_grids = 10
+        work_folder = work_folder or self.new_folder 
         
         self.modify_csv(os.path.join(work_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
         self.modify_first_column(os.path.join(work_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
