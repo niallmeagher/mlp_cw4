@@ -484,19 +484,27 @@ class PPOAgent:
             mask = mask.to(self.device)
         if weather is not None:
             weather = weather.to(self.device)
-        
 
-        dist, value = self.network(state, tabular=weather, mask=mask)
-        probs = F.softmax(dist, dim=-1)
-        probs = probs.reshape(20, 20)
-        flat_logits = dist.logits.flatten()
-        topk_values, topk_indices = torch.topk(flat_logits, k=20)
-        log_prob = dist.log_prob(topk_indices).sum()
-     
-        #return topk_indices, log_prob, value, continuous_action
-        return topk_indices, log_prob, value, actor_logits
-        
-        
+        # Forward pass through the network
+        actor_logits, value = self.network(state, tabular=weather, mask=mask)  # Shape: (1, 400), (1, 1)
+
+        # Apply mask to actor_logits if provided
+        if mask is not None:
+            actor_logits = actor_logits.masked_fill(mask == 0, -1e10)
+
+        # Compute probabilities using softmax
+        probs = F.softmax(actor_logits, dim=-1)  # Shape: (1, 400)
+        probs = probs.reshape(20, 20)  # Reshape to (20, 20) for visualization
+
+        # Sample top 20 actions
+        flat_logits = actor_logits.flatten()  # Shape: (400,)
+        topk_values, topk_indices = torch.topk(flat_logits, k=20)  # Shape: (20,), (20,)
+
+        # Compute log probabilities for the selected actions
+        log_probs = F.log_softmax(flat_logits, dim=-1)  # Shape: (400,)
+        log_prob = log_probs[topk_indices].sum()  # Sum of log probabilities for the top 20 actions
+
+        return topk_indices, log_prob, value, probs
 
     def reward_function(self, state, action):
         if self.learned_reward:
