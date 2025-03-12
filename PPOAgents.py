@@ -55,7 +55,7 @@ class RewardFunction(nn.Module):
 class PPOAgent:
     
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.1,
-                 value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False):
+                 value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, gae_lambda=0.95, update_epochs=5, learned_reward=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -76,7 +76,7 @@ class PPOAgent:
             self.network = nn.DataParallel(self.network)
         self.network.to(self.device)
 
-        self.gae_lambda = 0.95
+        self.gae_lambda = gae_lambda
 
         if self.learned_reward:
             self.reward_net = RewardFunction(state_channels=input_channels, state_size=20, num_actions=num_actions).to(self.device)
@@ -320,10 +320,9 @@ class PPOAgent:
             mask = mask.to(self.device)
         if weather is not None:
             weather = weather.to(self.device)
-
-    # Forward pass to get actor logits and value
+        # Forward pass to get actor logits and value
         actor_logits, value = self.network(state, tabular=weather, mask=mask)
-       
+        
         probs = F.softmax(actor_logits, dim=1)
         num_samples = 20
         topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
@@ -332,9 +331,7 @@ class PPOAgent:
         log_prob = dist.log_prob(topk_indices).sum()
      
         #return topk_indices, log_prob, value, continuous_action
-        return topk_indices, log_prob, value, actor_logits
-        
-        
+        return topk_indices, log_prob, value, actor_logits        
 
     def reward_function(self, state, action):
         if self.learned_reward:
@@ -434,14 +431,3 @@ class PPOAgent:
         true_reward = 1 - (abs(action - TARGET_ACTION) / TARGET_ACTION)
         true_reward = max(0.0, true_reward)
         return torch.tensor(true_reward, dtype=torch.float32)
-
-'''
-    def reward_function(self, state, action, next_state):
-        """
-        Placeholder for the reward function.
-        Implement your reward logic here. For example, it might depend on
-        the current state, the action taken, and the next state.
-        """
-        reward = 0.0  # Replace with your reward logic
-        return reward
-'''
