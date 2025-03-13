@@ -46,7 +46,7 @@ if __name__ == "__main__":
             study_name=args.study_name,
             storage=storage,
             direction="maximize",
-            load_if_exists=False,
+            load_if_exists=True,
             pruner=optuna.pruners.MedianPruner(n_startup_trials=10)
         )
     except optuna.exceptions.DuplicatedStudyError:
