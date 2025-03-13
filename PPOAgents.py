@@ -157,7 +157,7 @@ class PPOAgent:
             if is_csv:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
-
+    '''
     def calculate_dpv(self, work_folder, num_simulations = 10):
         dpv_values = np.zeros((20,20))
         for n in range(num_simulations):
@@ -167,6 +167,26 @@ class PPOAgent:
                     if burned_cells[i,j] == 1:
                         dpv_values[i,j] += 1
             print("n:", n)
+        return dpv_values / num_simulations
+    '''
+    def calculate_dpv(self, work_folder, num_simulations=10):
+        dpv_values = np.zeros((20, 20))
+        for n in range(num_simulations):
+            # Run a fire simulation
+            burned_cells = self.run_Cell2FireOnce_ReturnBurnMap(work_folder)
+            
+            # Calculate DPV for each cell
+            for i in range(20):
+                for j in range(20):
+                    if burned_cells[i, j] == 1:
+                        # Count the number of downstream cells protected by this cell
+                        protected_cells = 0
+                        for di in range(-1, 2):  # Check neighboring cells
+                            for dj in range(-1, 2):
+                                ni, nj = i + di, j + dj
+                                if 0 <= ni < 20 and 0 <= nj < 20 and burned_cells[ni, nj] == 0:
+                                    protected_cells += 1
+                        dpv_values[i, j] += protected_cells
         return dpv_values / num_simulations
     
     def select_firebreaks_dpv(self, dpv_values, num_firebreaks = 20):
