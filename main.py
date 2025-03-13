@@ -204,9 +204,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
                      input_channels=4, learned_reward=False)
     
-
-
-    csv_file = "episode_results.csv"
+    csvf = "episode_results.csv"
+    csv_file = os.path.join(f"{HOME_DIR2}",csvf)
     if not os.path.exists(csv_file):
         with open(csv_file, "w", newline="") as f:
             writer = csv.writer(f)
@@ -226,11 +225,10 @@ def main(args, start_epoch=0, checkpoint_path=None):
     tensor_input = read_multi_channel_asc(files)
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
-    
+
     #demonstrations = agent.generate_demonstrations(tensor_input, 100)
     #agent.preTraining(demonstrations)
 
-   # print(mask)
     for epoch in range(start_epoch, num_epochs):
         trajectories = {
             'states': [],
@@ -381,7 +379,7 @@ if __name__ == '__main__':
     parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)
     parser.add_argument('-i','--input_dir', help='Path to folder containing input data', required=True)
     parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
-   # parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
-   # parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
+    parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
+    parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
     args = vars(parser.parse_args())
     main(args)
