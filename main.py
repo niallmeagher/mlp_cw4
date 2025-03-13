@@ -2,6 +2,7 @@ import os
 import glob
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import shutil
 import numpy as np
 import argparse
@@ -229,6 +230,11 @@ def main(args, start_epoch=0, checkpoint_path=None):
     demonstrations = agent.generate_demonstrations(tensor_input, 100)
     print("Demonstrations collected")
     agent.preTraining(demonstrations)
+
+    state = torch.tensor(demonstrations[0][0], dtype=torch.float32).to(agent.device)
+    action_indices, _, _, actor_logits = agent.select_action(state)
+    print("Selected Actions:", action_indices)
+    print("Action Probabilities:", F.softmax(actor_logits, dim=1))
 
     for epoch in range(start_epoch, num_epochs):
         trajectories = {
