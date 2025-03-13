@@ -48,6 +48,9 @@ rsync --archive --update --compress --progress --exclude='results/' ${data_path}
 rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_HOME}
 
 # Run command
+# Shared SQLite path (MUST be on network storage!)
+DB_PATH="/home/${USER}/shared_storage/optuna.db"
+
 while [ $retry_count -lt $max_retries ]; do
     python scripts/optuna_study.py --db-path "$DB_PATH"
     exit_code=$?

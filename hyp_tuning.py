@@ -30,12 +30,15 @@ def objective(trial):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--storage", type=str, default="sqlite:///optuna.db")
+    parser.add_argument("--db-path", type=str, required=True)
     parser.add_argument("--study-name", type=str, default="ppo_20x20")
     args = parser.parse_args()
 
-    # Create storage and study
-    storage = RDBStorage(url=args.storage)
+    # SQLite with connection pool and timeout
+    storage = RDBStorage(
+        url=f"sqlite:///{args.db_path}",
+        engine_kwargs={"pool_size": 20, "connect_args": {"timeout": 30}}
+    )
     
     # Create study if it doesn't exist
     try:
