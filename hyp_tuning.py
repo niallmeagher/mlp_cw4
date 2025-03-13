@@ -31,7 +31,7 @@ def objective(trial):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--storage", type=str, default="sqlite:///optuna.db")
-    parser.add_argument("--study-name", type=str, default="ppo_optimization")
+    parser.add_argument("--study-name", type=str, default="ppo_20x20")
     args = parser.parse_args()
 
     # Create storage and study
@@ -58,12 +58,12 @@ if __name__ == "__main__":
         n_startup_trials=20  # Should be >= number of parallel workers
     )
 
-    study.optimize(objective, n_trials=50)  # Total trials across all workers
+    study.optimize(objective, n_trials=1)  # Total trials across all workers
 
     # Print results
-    print("Best trial:")
-    trial = study.best_trial
-    print(f"  Value (Average Reward): {trial.value}")
-    print("  Params:")
-    for key, value in trial.params.items():
-        print(f"    {key}: {value}")
+    # print("Best trial:")
+    # trial = study.best_trial
+    # print(f"  Value (Average Reward): {trial.value}")
+    # print("  Params:")
+    # for key, value in trial.params.items():
+    #     print(f"    {key}: {value}")
