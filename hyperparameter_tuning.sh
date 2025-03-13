@@ -52,7 +52,7 @@ rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_
 DB_PATH="/home/${USER}/shared_storage/optuna.db"
 
 while [ $retry_count -lt $max_retries ]; do
-    python scripts/optuna_study.py --db-path "$DB_PATH"
+    python mlp_cw4/hyp_tuning.py --db-path "$DB_PATH"
     exit_code=$?
     
     if [ $exit_code -eq 0 ]; then
