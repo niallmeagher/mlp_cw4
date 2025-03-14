@@ -1,10 +1,15 @@
 import optuna
+import os
 import pandas as pd
+
+# Expand ~ to full path
+db_path = os.path.expanduser("~/shared_storage/optuna.db")
+storage = f"sqlite:///{db_path}"
 
 # Load study from SQLite
 study = optuna.load_study(
     study_name="ppo_20x20",
-    storage="sqlite:///home/s2750319/shared_storage/optuna.db"
+    storage=storage
 )
 
 # Get best trial
