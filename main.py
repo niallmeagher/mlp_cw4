@@ -279,6 +279,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
             trajectories['continuous_action'].append(res['continuous_action'])
             trajectories['true_rewards'].append(res['true_reward'])
             total_reward += res['reward'].item()
+        if len(trajectories['states']) == 0:
+            continue
         trajectories['states'] = torch.cat(trajectories['states'], dim=0)
         trajectories['actions'] = torch.stack(trajectories['actions'], dim=0)
         trajectories['log_probs'] = torch.stack(trajectories['log_probs'], dim=0)
