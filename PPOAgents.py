@@ -212,7 +212,7 @@ class PPOAgent:
                 cell_idx = i * grid_size + j
                 if j < grid_size - 1:
                     adjacency_matrix[cell_idx, cell_idx + 1] = 1
-                if j < grid_size - 1:
+                if i < grid_size - 1:
                     adjacency_matrix[cell_idx, cell_idx + grid_size] = 1
         
         adjacency_matrix = adjacency_matrix + adjacency_matrix.T
