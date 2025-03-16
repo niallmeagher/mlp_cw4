@@ -225,20 +225,27 @@ class PPOAgent:
         return mst
     
 
-
     def calculate_dpv(self, work_folder, num_simulations=10):
         dpv_values = np.zeros((20, 20))
         adjacency_matrix = self.create_forest_graph(20)
 
         for _ in range(num_simulations):
             burned_cells = self.run_Cell2FireOnce_ReturnBurnMap(work_folder)
-            burned_indeces = np.where(burned_cells == 1)[0]
-            mst = self.calculate_mst(adjacency_matrix, burned_indeces)
+            burned_indices = np.where(burned_cells.flatten() == 1)[0]
+            
+            # Create a mapping from original indices to subgraph indices
+            index_mapping = {original_idx: subgraph_idx for subgraph_idx, original_idx in enumerate(burned_indices)}
+            
+            # Calculate MST on the subgraph of burned cells
+            subgraph = adjacency_matrix[burned_indices, :][:, burned_indices]
+            sparse_graph = csr_matrix(subgraph)
+            mst = minimum_spanning_tree(sparse_graph)
 
-            for i in burned_indeces:
-                mst_rooted = mst[i, :]
-
-                dpv_values[i // 20, i % 20] += np.sum(mst_rooted)
+            # Calculate DPV for each burned cell
+            for original_idx in burned_indices:
+                subgraph_idx = index_mapping[original_idx]
+                mst_rooted = mst[subgraph_idx, :]
+                dpv_values[original_idx // 20, original_idx % 20] += np.sum(mst_rooted)
         
         return dpv_values / num_simulations
     
