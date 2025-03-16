@@ -3,14 +3,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.distributions import Categorical
 import numpy as np
 import shutil
-from ActorCriticNetworks import ActorCriticNetwork
 import subprocess
 import os
 import glob
 import difflib
+import uuid
+import csv
+import tempfile
+import concurrent.futures
+import multiprocessing as mp
+from scipy.sparse.csgraph import minimum_spanning_tree
+from scipy.sparse import csr_matrix
 import uuid
 import csv
 import tempfile
@@ -157,6 +162,8 @@ class PPOAgent:
             if is_csv:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
+    
+    #Simple DPV Alternative, based on the number of times a cell catches fire
     '''
     def calculate_dpv(self, work_folder, num_simulations = 10):
         dpv_values = np.zeros((20,20))
@@ -168,6 +175,9 @@ class PPOAgent:
                         dpv_values[i,j] += 1
             print("n:", n)
         return dpv_values / num_simulations
+    '''
+
+    #Naive DPV calculation - based on the number of cells protected by each cell
     '''
     def calculate_dpv(self, work_folder, num_simulations=10):
         dpv_values = np.zeros((20, 20))
@@ -188,10 +198,53 @@ class PPOAgent:
                                     protected_cells += 1
                         dpv_values[i, j] += protected_cells
         return dpv_values / num_simulations
+    '''
+
+    #Full DPV calculation - using graphs and subgraphs to calculate risk and then the DPV
+    def create_forest_graph(self, grid_size):
+        num_nodes = grid_size * grid_size
+        adjacency_matrix = np.zeros((num_nodes, num_nodes))
+
+        for i in range(grid_size):
+            for j in range(grid_size):
+                cell_idx = i * grid_size + j
+                if j < grid_size - 1:
+                    adjacency_matrix[cell_idx, cell_idx + 1] = 1
+                if j < grid_size - 1:
+                    adjacency_matrix[cell_idx, cell_idx + grid_size] = 1
+        
+        adjacency_matrix = adjacency_matrix + adjacency_matrix.T
+        return adjacency_matrix
     
-    def select_firebreaks_dpv(self, dpv_values, num_firebreaks = 20):
-        #flatten the dpv values
-        topk_indices = np.argsort(dpv_values.flatten())[-num_firebreaks:]
+    def calculate_mst(self, adjacency_matrix, burned_cells):
+        subgraph = adjacency_matrix[burned_cells, :][:, burned_cells]
+        sparce_graph = csr_matrix(subgraph)
+        mst = minimum_spanning_tree(sparce_graph)
+        return mst
+    
+
+
+    def calculate_dpv(self, work_folder, num_simulations=10):
+        dpv_values = np.zeros((20, 20))
+        adjacency_matrix = self.create_forest_graph(20)
+
+        for _ in range(num_simulations):
+            burned_cells = self.run_Cell2FireOnce_ReturnBurnMap(work_folder)
+            burned_indeces = np.where(burned_cells == 1)[0]
+            mst = self.calculate_mst(adjacency_matrix, burned_indeces)
+
+            for i in burned_indeces:
+                mst_rooted = mst[i, :]
+
+                dpv_values[i // 20, i % 20] += np.sum(mst_rooted)
+        
+        return dpv_values / num_simulations
+    
+    def select_firebreaks_dpv(self, dpv_values, num_firebreaks=20):
+        # Normalize DPV values (optional)
+        dpv_values_normalized = (dpv_values - np.min(dpv_values)) / (np.max(dpv_values) - np.min(dpv_values))
+        # Select top-k cells with the highest DPV values
+        topk_indices = np.argsort(dpv_values_normalized.flatten())[-num_firebreaks:]
         return topk_indices
     
     def generate_demonstrations(self, inputTensors, num_demos = 1000):
