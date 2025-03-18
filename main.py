@@ -13,6 +13,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor as TPE
 from concurrent.futures import ProcessPoolExecutor as PPE
 import multiprocessing as mp
+import optuna
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
@@ -69,6 +70,36 @@ def load_checkpoint(agent, checkpoint_path):
     start_epoch = checkpoint["epoch"]
     print(f"Resuming training from epoch {start_epoch}")
     return start_epoch
+
+
+def load_best_hyperparams(db_path="~/shared_storage/optuna.db", study_name="ppo_20x20"):
+    """
+    Load the best hyperparameters from the Optuna study.
+    """
+    # Expand ~ to full path
+    db_path = os.path.expanduser(db_path)
+    storage = f"sqlite:///{db_path}"
+    
+    try:
+        # Load the study
+        study = optuna.load_study(
+            study_name=study_name,
+            storage=storage
+        )
+        
+        cosine_trials = [
+            t for t in study.trials
+            if t.params.get("scheduler") == "cosine"
+        ]
+    
+            
+        best_trial = max(cosine_trials, key=lambda t: t.value)
+        return best_trial.params
+    
+        
+    except Exception as e:
+        print(f"Error loading study: {e}")
+        return None
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
     os.makedirs(folder1, exist_ok=True)
@@ -202,9 +233,20 @@ def main(args):
     input_folder_final=f'{input_dir}/'
     output_folder=f'{output_dir}v2'
     output_folder_base=f'{output_dir}_base/'
-    #agent = PPOAgent(input_channels=4, learned_reward=False)
+
+    params = load_best_hyperparams()
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
-                     input_channels=4, learned_reward=False)
+                     input_channels=4, learned_reward=False,
+                     lr=params['lr'],
+                     clip_epsilon=params["clip_epsilon"],
+                     value_loss_coef=params["value_loss_coef"],
+                     entropy_coef=params["entropy_coef"],
+                     gamma=params["gamma"],
+                     gae_lambda=params["gae_lambda"],
+                     scheduler_type=params=["scheduler"],
+                     T_max=params["T_max"],      
+                     eta_min=params["eta_min"]  
+                     )
     
     csvf = "episode_results.csv"
     csv_file = os.path.join(f"{HOME_DIR2}",csvf)
