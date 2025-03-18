@@ -29,17 +29,19 @@ def save_checkpoint(agent, epoch, checkpoint_dir):
     checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
     
     # Handle DataParallel wrapping when saving
-    model_state_dict = agent.network.module.state_dict() if isinstance(agent.network, nn.DataParallel) else agent.network.state_dict()
+    policy_state_dict = agent.policy_net.module.state_dict() if isinstance(agent.policy_net, nn.DataParallel) else agent.policy_net.state_dict()
+    target_state_dict = agent.target_net.module.state_dict() if isinstance(agent.target_net, nn.DataParallel) else agent.target_net.state_dict()
     
     checkpoint = {
         "epoch": epoch,
-        "model_state_dict": model_state_dict,
+        "policy_state_dict": policy_state_dict,
+        "target_state_dict": target_state_dict,
         "optimizer_state_dict": agent.optimizer.state_dict(),
         "learned_reward": agent.learned_reward,
         "scheduler_state_dict": agent.scheduler.state_dict() if agent.scheduler else None
     }
     
-    if agent.learned_reward and agent.reward_net is not None:
+    if agent.learned_reward and hasattr(agent, "reward_net"):
         reward_state_dict = agent.reward_net.module.state_dict() if isinstance(agent.reward_net, nn.DataParallel) else agent.reward_net.state_dict()
         checkpoint["reward_net_state_dict"] = reward_state_dict
         
@@ -52,10 +54,15 @@ def load_checkpoint(agent, checkpoint_path):
     checkpoint = torch.load(checkpoint_path, map_location=agent.device)
     
     # Handle DataParallel wrapping when loading
-    if isinstance(agent.network, nn.DataParallel):
-        agent.network.module.load_state_dict(checkpoint["model_state_dict"])
+    if isinstance(agent.policy_net, nn.DataParallel):
+        agent.policy_net.module.load_state_dict(checkpoint["policy_state_dict"])
     else:
-        agent.network.load_state_dict(checkpoint["model_state_dict"])
+        agent.policy_net.load_state_dict(checkpoint["policy_state_dict"])
+    
+    if isinstance(agent.target_net, nn.DataParallel):
+        agent.target_net.module.load_state_dict(checkpoint["target_state_dict"])
+    else:
+        agent.target_net.load_state_dict(checkpoint["target_state_dict"])
         
     agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     
@@ -64,6 +71,7 @@ def load_checkpoint(agent, checkpoint_path):
             agent.reward_net.module.load_state_dict(checkpoint["reward_net_state_dict"])
         else:
             agent.reward_net.load_state_dict(checkpoint["reward_net_state_dict"])
+    
     if agent.scheduler and "scheduler_state_dict" in checkpoint:
         agent.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
             
