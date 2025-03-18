@@ -85,8 +85,8 @@ class DQNAgent:
         #GPU
         self.num_gpus = torch.cuda.device_count()        
         if self.num_gpus > 1:
-            self.network = nn.DataParallel(self.network)
-        self.network.to(self.device)
+            self.policy_net = nn.DataParallel(self.policy_net)
+        self.policy_net.to(self.device)
 
 
         self.scheduler = None
@@ -535,7 +535,11 @@ class DQNAgent:
     def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
     
         header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
-      
+        
+        print(action_indices)
+        if isinstance(action_indices, list):
+            action_indices = torch.tensor(action_indices, dtype=torch.long)
+
         H, W = grid.shape  # Assuming 20x20 grid
         rows = (action_indices // W).cpu().numpy()
         cols = (action_indices % W).cpu().numpy()
@@ -553,10 +557,10 @@ class DQNAgent:
         return reward
   
     def select_action(self, state, mask=None):
-        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)
         if mask is not None:
-            mask = torch.FloatTensor(mask).unsqueeze(0).to(self.device)
-        
+            mask = torch.tensor(mask, dtype=torch.float32).unsqueeze(0).to(self.device)
+
         if random.random() < self.epsilon:
             # Randomly select 20 actions (firebreak locations)
             return random.sample(range(self.policy_net.advantage_fc.out_features), 20)

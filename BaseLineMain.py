@@ -135,14 +135,18 @@ def prepare_state_tensor(tensor_input, tabular_tensor):
     """
     # Reshape tabular_tensor to (1, 8, 11, 1, 1) and repeat it to match the spatial dimensions of the state tensor
     tabular_tensor = tabular_tensor.unsqueeze(-1).unsqueeze(-1)  # Shape: (1, 8, 11, 1, 1)
-    tabular_tensor = tabular_tensor.repeat(1, 1, 1, 20, 20)  # Shape: (1, 8, 11, 20, 20)
+    tabular_tensor = tabular_tensor.expand(-1, -1, -1, 20, 20)  # Shape: (1, 8, 11, 20, 20)
     
+    tabular_tensor = tabular_tensor.reshape(1, -1, 20, 20)
+
     # Concatenate along the channel dimension
     combined_state = torch.cat([tensor_input, tabular_tensor], dim=1)  # Shape: (1, 12, 20, 20)
     return combined_state
 
 def simulate_single_episode(agent, state, mask, input_folder):
     # Create a temporary working directory for this episode
+    state = state.float()
+    mask = mask.float()
     episode_id = uuid.uuid4().hex
     temp_work_dir = os.path.join(HOME_DIR, f"cell2fire_input_{episode_id}/")
     os.mkdir(temp_work_dir)
