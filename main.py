@@ -221,7 +221,7 @@ def main(args):
     #if not os.path.exists(output_dir):
     # os.makedirs(output_dir)
 
-    output_file = open(f'{output_dir}/Epoch_Stats.csv','w')
+    output_file = open(f'{output_dir}v2/Epoch_Stats.csv','w')
     output_file.write('epoch,reward,loss,policy_loss,value_loss,entropy\n')
 
     # Hyperparameters
