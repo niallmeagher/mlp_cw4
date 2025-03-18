@@ -325,11 +325,7 @@ class PPOAgent:
                                                             work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
         
         return reward
-<<<<<<< HEAD
-   
-=======
-  
->>>>>>> Matthews_code
+    
     def select_action(self, state, weather=None, mask=None):
         state = state.to(self.device)
         if mask is not None:
@@ -339,11 +335,7 @@ class PPOAgent:
 
     # Forward pass to get actor logits and value
         actor_logits, value = self.network(state, tabular=weather, mask=mask)
-<<<<<<< HEAD
-       
-=======
-        
->>>>>>> Matthews_code
+
         probs = F.softmax(actor_logits, dim=1)
         num_samples = 20
         topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
@@ -391,11 +383,7 @@ class PPOAgent:
             advantages[t] = gae
         returns = advantages + values
         return advantages, returns
-<<<<<<< HEAD
-   
-=======
     
->>>>>>> Matthews_code
     def update(self, trajectories):
         states = trajectories['states'].to(self.device)
         masks = trajectories['masks'].to(self.device)
@@ -427,18 +415,10 @@ class PPOAgent:
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
             dist_softmax = F.softmax(actor_logits,dim=1)
             dist = Categorical(probs = dist_softmax)
-<<<<<<< HEAD
-        
-=======
-            '''
->>>>>>> Matthews_code
+
             new_log_probs = []
             entropies2 = []
             for i in range(states.size(0)):
-<<<<<<< HEAD
-=======
-            
->>>>>>> Matthews_code
                 state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],mask=masks[i:i+1] if masks is not None else None)
                 new_probs = F.softmax(state_logits, dim=1)
                 new_dist = Categorical(probs=new_probs)
@@ -450,7 +430,7 @@ class PPOAgent:
             new_log_probs = torch.stack(new_log_probs)
             #New Entropy
             entropy = torch.stack(entropies2).mean()
-            '''
+            
             
             batch_size = states.size(0)
             flat_actions = actions.view(-1)
@@ -466,12 +446,9 @@ class PPOAgent:
             new_log_probs = torch.stack(new_log_probs)
         
             entropy = dist.entropy().mean()
-<<<<<<< HEAD
-=======
             
             #For old entropy
            # entropy = dist.entropy().mean()
->>>>>>> Matthews_code
             ratio = torch.exp(new_log_probs - old_log_probs)
             surr1 = ratio * advantages
             surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * advantages
