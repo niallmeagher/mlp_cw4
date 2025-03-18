@@ -3,7 +3,7 @@
 #
 # example usage:
 # ```
-# sbatch batchjob.sh 1000 3 Sub20x20 Sub20x20
+# sbatch batchjob.sh 1000 10 Sub20x20 Sub20x20
 # ```
 #
 # or, equivalently and as intended, with provided `run_experiement`:
@@ -126,10 +126,10 @@ rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_
 # you execute `sbatch --array=1:100 ...` the jobs will get numbers 1 to 100
 # inclusive.
 
-NumEpochs=1000$1 # eg 1000
-NumEpisodes=10$2 # eg 3
-InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20$3 # eg Sub20x20
-OutputFileDirectory=${SCRATCH_HOME}/Cell2Fire/results/Sub20x20$4 # eg Sub20x20
+NumEpochs=$1 # eg 1000
+NumEpisodes=$2 # eg 10
+InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/$3 # eg Sub20x20
+OutputFileDirectory=${SCRATCH_HOME}/Cell2Fire/results/$4 # eg Sub20x20
 
 COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}""
 echo "Running provided command: ${COMMAND}"
@@ -146,7 +146,7 @@ echo "Command ran successfully!"
 echo "Moving output data back to DFS"
 
 
-Output=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20_Test/Checkpoints
+Output=${SCRATCH_HOME}/Cell2Fire/data/${3}_Test/Checkpoints
 results = ${SCRATCH_HOME}/Cell2Fire/results/episode_results.csv
 results2 = ${SCRATCH_HOME}/Cell2Fire/results/Epoch_Stats.csv
 src_path=${Output}

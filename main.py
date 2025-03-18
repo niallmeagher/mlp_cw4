@@ -25,7 +25,7 @@ HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
 def save_checkpoint(agent, epoch, checkpoint_dir):
     """Save training checkpoint with model state"""
     os.makedirs(checkpoint_dir, exist_ok=True)
-    checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pt")
+    checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint.pt")
     
     # Handle DataParallel wrapping when saving
     model_state_dict = agent.network.module.state_dict() if isinstance(agent.network, nn.DataParallel) else agent.network.state_dict()
@@ -71,11 +71,6 @@ def load_checkpoint(agent, checkpoint_path):
     return start_epoch
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
-<<<<<<< HEAD
- 
-=======
-   
->>>>>>> Matthews_code
     os.makedirs(folder1, exist_ok=True)
     
     for filename in os.listdir(folder1):
@@ -187,13 +182,15 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     }
     
 
-def main(args, start_epoch=0, checkpoint_path=None):
+def main(args):
     input_dir = args['input_dir'] # e.g Sub20x20
     output_dir = args['output_dir']
-    #if not os.path.exists(output_dir):
-       # os.makedirs(output_dir)
+    checkpoint_path = args['checkpoint_path']
 
-    output_file = open(f'{HOME_DIR2}/Epoch_Stats.csv','w')
+    #if not os.path.exists(output_dir):
+    # os.makedirs(output_dir)
+
+    output_file = open(f'{output_dir}/Epoch_Stats.csv','w')
     output_file.write('epoch,reward,loss,policy_loss,value_loss,entropy\n')
 
     # Hyperparameters
@@ -256,46 +253,6 @@ def main(args, start_epoch=0, checkpoint_path=None):
         tabular_tensor = tensor_data.view(1, 8, 11)
         epoch_rewards = []
         epoch_values = []
-        '''
-        for episode in range(episodes_per_epoch):
-            
-            state = tensor_input.clone()
-            valid_actions_mask = mask
-            
-            action_indices, log_prob, value, real_action = agent.select_action(state, tabular_tensor, valid_actions_mask)
-            
-            print("Value", value)
-            
-            # Simulate the fire episode to get the true reward.
-            true_reward = agent.simulate_fire_episode(action_indices)
-            total_reward += true_reward
-            epoch_rewards.append(float(true_reward))
-            epoch_values.append(float(value.item()))
-            
-            
-            # For a one-step episode, done is True.
-            done = torch.tensor(1, dtype=torch.float32, device=agent.device)
-            trajectories['states'].append(state)
-            trajectories['actions'].append(action_indices)  # store the 20 selected indices
-            trajectories['log_probs'].append(log_prob)
-            trajectories['values'].append(value)
-            trajectories['rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
-            trajectories['dones'].append(done)
-            trajectories['weather'].append(tabular_tensor)
-            trajectories['masks'].append(valid_actions_mask)
-            trajectories['true_rewards'].append(torch.tensor([true_reward], dtype=torch.float32))
-           # print(valid_actions_mask.shape)
-        
-        trajectories['states'] = torch.cat(trajectories['states'], dim=0)
-        trajectories['actions'] = torch.stack(trajectories['actions'])  # shape (episodes, 20)
-        trajectories['log_probs'] = torch.stack(trajectories['log_probs'])
-        trajectories['values'] = torch.cat(trajectories['values'], dim=0)
-        trajectories['rewards'] = torch.cat(trajectories['rewards'], dim=0).squeeze(-1)
-        trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
-        trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
-        trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
-        trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
-        '''
         start_time = time.time()
         with TPE(max_workers=mp.cpu_count()) as executor:
             
@@ -358,17 +315,6 @@ def main(args, start_epoch=0, checkpoint_path=None):
     torch.save(agent.network.state_dict(), final_path)
     print(f"Final model saved at {final_path}")
     output_file.close()
-    '''
-    test_state = torch.zeros(1, 1, 20, 20)
-
-    test_mask = torch.ones(1, 400)
-    action_indices, log_prob, value, _ = agent.select_action(test_state,tabular_tensor,  mask=test_mask)
-    print("\nFinal Test:")
-    print(f"Chosen Action Indices: {action_indices}")
-    print(f"Estimated Value: {value.item():.4f}")
-    test_true_reward = agent.simulate_test_episode(test_state, action_indices[0])
-    print(f"Test True Reward: {test_true_reward.item():.4f}")
-    '''
 
     
 
@@ -380,12 +326,6 @@ if __name__ == '__main__':
     parser.add_argument('-e','--episodes', help='Number of episodes per epoch', required=True)
     parser.add_argument('-i','--input_dir', help='Path to folder containing input data', required=True)
     parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
-<<<<<<< HEAD
     parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
-    parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
-=======
-   # parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
-   # parser.add_argument('-s', '--start_epoch', help='The number of the starting epoch (if you are resuming a failed run)', required=False, default=0)
->>>>>>> Matthews_code
     args = vars(parser.parse_args())
     main(args)
