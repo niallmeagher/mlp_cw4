@@ -243,7 +243,7 @@ def main(args):
                      entropy_coef=params["entropy_coef"],
                      gamma=params["gamma"],
                      gae_lambda=params["gae_lambda"],
-                     scheduler_type=params=["scheduler"],
+                     scheduler_type=params["scheduler"],
                      T_max=params["T_max"],      
                      eta_min=params["eta_min"]  
                      )
