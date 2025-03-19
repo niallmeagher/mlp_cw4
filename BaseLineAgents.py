@@ -651,7 +651,7 @@ class DQNAgent:
             next_q_values = next_q_values.max(1)[0]  # Shape: (batch_size,)
             target_q_values = rewards + (1 - dones) * self.gamma * next_q_values.unsqueeze(1)  # Shape: (batch_size, 1)
         
-        target_q_values = target_q_values.unsqueeze(1).expand(-1,20)
+        target_q_values = target_q_values.expand(-1, 20)
         # Compute loss (mean squared error between current and target Q-values)
         loss = F.mse_loss(gathered_q_values, target_q_values)
         
