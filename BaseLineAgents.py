@@ -640,6 +640,7 @@ class DQNAgent:
         print("Actions shape:", actions.shape)  # Debug: Should be [batch_size, 20]
         
         rewards = torch.FloatTensor(np.array(rewards)).to(self.device)  # Shape: [batch_size]
+        rewards = rewards.squeeze(1)  # Shape: [64]
         print("Rewards shape:", rewards.shape)  # Debug: Should be [batch_size]
         
         next_states = torch.FloatTensor(np.array(next_states)).squeeze(1).to(self.device)  # Shape: [batch_size, channels, height, width]
