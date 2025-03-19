@@ -555,12 +555,17 @@ class DQNAgent:
                                                        output_folder_base= output_folder_base)
         
         return reward
-  
+        
     def select_action(self, state, mask=None):
-        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)
+        print("State shape before unsqueeze:", state.shape)  # Debug: Should be [channels, height, width] or [1, channels, height, width]
+        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)  # Add batch dimension
+        print("State shape after unsqueeze:", state.shape)  # Debug: Should be [1, channels, height, width]
+        state = state.squeeze(1)  # Remove extra dimension if present
+        print("State shape after squeeze:", state.shape)  # Debug: Should be [1, channels, height, width]
+        
         if mask is not None:
             mask = torch.tensor(mask, dtype=torch.float32).unsqueeze(0).to(self.device)
-
+        
         if random.random() < self.epsilon:
             # Randomly select 20 actions (firebreak locations)
             return random.sample(range(self.policy_net.advantage_fc.out_features), 20)
