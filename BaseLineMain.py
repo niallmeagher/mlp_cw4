@@ -217,7 +217,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     output_folder_base=f'{output_dir}_base/'
     #agent = PPOAgent(input_channels=4, learned_reward=False)
     agent = DQNAgent(input_folder_final, new_folder, output_folder,output_folder_base,
-                     input_channels=12, learned_reward=False)
+                     input_channels=4, learned_reward=False)
     
     csvf = "episode_results.csv"
     csv_file = os.path.join(f"{HOME_DIR2}",csvf)
@@ -249,19 +249,19 @@ def main(args, start_epoch=0, checkpoint_path=None):
     for epoch in range(start_epoch, num_epochs):
         total_reward = 0.0
     
-        folder_sample_from = os.path.join(input_dir, "Weathers")
-        folder_stored = os.path.join(input_dir, "Weathers_Stored")
-        if os.path.exists(folder_sample_from) and not os.path.exists(folder_stored):
-            os.rename(folder_sample_from, folder_stored)
-        tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
-        tabular_tensor = tensor_data.view(1, 8, 11)
-        combined_state = prepare_state_tensor(tensor_input, tabular_tensor)
+        #folder_sample_from = os.path.join(input_dir, "Weathers")
+        #folder_stored = os.path.join(input_dir, "Weathers_Stored")
+        #if os.path.exists(folder_sample_from) and not os.path.exists(folder_stored):
+            #os.rename(folder_sample_from, folder_stored)
+        #tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
+        #tabular_tensor = tensor_data.view(1, 8, 11)
+        #combined_state = prepare_state_tensor(tensor_input, tabular_tensor)
 
         start_time = time.time()
         with TPE(max_workers=mp.cpu_count()) as executor:
             
             futures = [executor.submit(simulate_single_episode, agent,
-                                   combined_state.clone(), mask, input_folder_final)
+                                   tensor_input.clone(), mask, input_folder_final)
                    for _ in range(episodes_per_epoch)]
            
             results = [future.result() for future in futures]
