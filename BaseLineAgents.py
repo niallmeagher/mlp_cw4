@@ -640,7 +640,8 @@ class DQNAgent:
         
         # Compute Q-values for the current states and selected actions
         current_q_values = self.policy_net(states, mask=masks)  # Shape: (batch_size, num_actions)
-        actions = actions.unsqueeze(1)  # Shape: (batch_size, 20, 1)
+        print(current_q_values.shape)
+        print(actions.shape)
         
         gathered_q_values = torch.gather(current_q_values.unsqueeze(1).expand(-1, 20, -1), 2, actions)  # Shape: (batch_size, 20)
         gathered_q_values = gathered_q_values.squeeze(-1)  # Shape: (batch_size,20)
