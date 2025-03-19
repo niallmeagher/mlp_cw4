@@ -631,7 +631,7 @@ class DQNAgent:
         states, actions, rewards, next_states, dones, masks = zip(*batch)
         
         # Convert to tensors
-        states = torch.FloatTensor(np.array(states)).to(self.device)
+        states = torch.FloatTensor(np.array(states)).squeeze(1).to(self.device)
         actions = torch.LongTensor(np.array(actions)).to(self.device)  # Shape: (batch_size, 20)
         rewards = torch.FloatTensor(np.array(rewards)).to(self.device)
         next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
