@@ -623,7 +623,9 @@ class DQNAgent:
             print(f"Epoch {epoch}, Loss: {avgLoss}")
 
     def update(self):
+        # Check if there are enough samples in the replay buffer
         if len(self.replay_buffer) < self.batch_size:
+            print("Replay buffer has fewer samples than batch size. Skipping update.")
             return
         
         # Sample a batch from the replay buffer
@@ -631,43 +633,72 @@ class DQNAgent:
         states, actions, rewards, next_states, dones, masks = zip(*batch)
         
         # Convert to tensors
-        states = torch.FloatTensor(np.array(states)).squeeze(1).to(self.device)
-        print(states.shape)
-        actions = torch.LongTensor(np.array(actions)).to(self.device)  # Shape: (batch_size, 20)
-        rewards = torch.FloatTensor(np.array(rewards)).to(self.device)
-        next_states = torch.FloatTensor(np.array(next_states)).squeeze(1).to(self.device)
-        print(next_states.shape)
-        dones = torch.FloatTensor(np.array(dones)).to(self.device)
-        masks = torch.FloatTensor(np.array(masks)).to(self.device) if masks[0] is not None else None
+        states = torch.FloatTensor(np.array(states)).squeeze(1).to(self.device)  # Shape: [batch_size, channels, height, width]
+        print("States shape:", states.shape)  # Debug: Should be [batch_size, channels, height, width]
         
-        # Compute Q-values for the current states and selected actions
-        current_q_values = self.policy_net(states, mask=masks)  # Shape: (batch_size, num_actions)
+        actions = torch.LongTensor(np.array(actions)).to(self.device)  # Shape: [batch_size, 20]
+        print("Actions shape:", actions.shape)  # Debug: Should be [batch_size, 20]
         
-        gathered_q_values = torch.gather(current_q_values, 1, actions)  # Shape: (batch_size, 20)
-
+        rewards = torch.FloatTensor(np.array(rewards)).to(self.device)  # Shape: [batch_size]
+        print("Rewards shape:", rewards.shape)  # Debug: Should be [batch_size]
+        
+        next_states = torch.FloatTensor(np.array(next_states)).squeeze(1).to(self.device)  # Shape: [batch_size, channels, height, width]
+        print("Next states shape:", next_states.shape)  # Debug: Should be [batch_size, channels, height, width]
+        
+        dones = torch.FloatTensor(np.array(dones)).to(self.device)  # Shape: [batch_size]
+        print("Dones shape:", dones.shape)  # Debug: Should be [batch_size]
+        
+        masks = torch.FloatTensor(np.array(masks)).to(self.device) if masks[0] is not None else None  # Shape: [batch_size, num_actions]
+        print("Masks shape:", masks.shape if masks is not None else "None")  # Debug: Should be [batch_size, num_actions] or None
+        
+        # Compute Q-values for the current states using the policy network
+        current_q_values = self.policy_net(states, mask=masks)  # Shape: [batch_size, num_actions]
+        print("Current Q-values shape:", current_q_values.shape)  # Debug: Should be [batch_size, num_actions]
+        
+        # Gather Q-values for the actions that were actually taken
+        gathered_q_values = torch.gather(current_q_values, 1, actions)  # Shape: [batch_size, 20]
+        print("Gathered Q-values shape:", gathered_q_values.shape)  # Debug: Should be [batch_size, 20]
+        
         # Compute Q-values for the next states using the target network
         with torch.no_grad():
-            next_q_values = self.target_net(next_states, mask=masks)  # Shape: (batch_size, num_actions)
-            next_q_values = next_q_values.max(1)[0]  # Shape: (batch_size,)
-            target_q_values = rewards + (1 - dones) * self.gamma * next_q_values.unsqueeze(1)  # Shape: (batch_size, 1)
+            next_q_values = self.target_net(next_states, mask=masks)  # Shape: [batch_size, num_actions]
+            print("Next Q-values shape:", next_q_values.shape)  # Debug: Should be [batch_size, num_actions]
+            
+            # Use the maximum Q-value for the next state to compute the target
+            max_next_q_values = next_q_values.max(1)[0]  # Shape: [batch_size]
+            print("Max next Q-values shape:", max_next_q_values.shape)  # Debug: Should be [batch_size]
+            
+            # Compute the target Q-values using the Bellman equation
+            target_q_values = rewards + (1 - dones) * self.gamma * max_next_q_values  # Shape: [batch_size]
+            print("Target Q-values shape (before reshape):", target_q_values.shape)  # Debug: Should be [batch_size]
         
-        target_q_values = target_q_values.expand(-1, 20)
-        # Compute loss (mean squared error between current and target Q-values)
+        # Reshape target_q_values to match gathered_q_values
+        target_q_values = target_q_values.unsqueeze(1).expand(-1, 20)  # Shape: [batch_size, 20]
+        print("Target Q-values shape (after reshape):", target_q_values.shape)  # Debug: Should be [batch_size, 20]
+        
+        # Compute the loss (mean squared error between gathered_q_values and target_q_values)
         loss = F.mse_loss(gathered_q_values, target_q_values)
+        print("Loss:", loss.item())  # Debug: Print the computed loss
         
-        # Optimize the model
+        # Optimize the policy network
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         
-        # Decay epsilon
+        # Decay the exploration rate (epsilon)
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+        print("Epsilon:", self.epsilon)  # Debug: Print the updated epsilon value
         
-        # Update target network
+        # Update the target network periodically
         if self.update_step % self.target_update == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
+            print("Target network updated.")  # Debug: Indicate that the target network was updated
         
+        # Increment the update step counter
         self.update_step += 1
+        print("Update step:", self.update_step)  # Debug: Print the current update step
+        
+        # Return the loss for logging or monitoring
         return loss.item()
 
     def simulate_test_episode(self, state, action):
