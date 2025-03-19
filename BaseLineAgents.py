@@ -641,7 +641,7 @@ class DQNAgent:
         # Compute Q-values for the current states and selected actions
         print(states.shape)
         current_q_values = self.policy_net(states, mask=masks)  # Shape: (batch_size, num_actions)
-        current_q_values = current_q_values.gather(1, actions)  # Shape: (batch_size, 20)
+        gathered_q_values = torch.gather(current_q_values, 1, actions)  # Shape: (batch_size, 20)
         
         # Compute Q-values for the next states using the target network
         with torch.no_grad():
@@ -650,7 +650,7 @@ class DQNAgent:
             target_q_values = rewards + (1 - dones) * self.gamma * next_q_values.unsqueeze(1)  # Shape: (batch_size, 1)
         
         # Compute loss (mean squared error between current and target Q-values)
-        loss = F.mse_loss(current_q_values, target_q_values.expand_as(current_q_values))
+        loss = F.mse_loss(gathered_q_values, target_q_values.expand_as(current_q_values))
         
         # Optimize the model
         self.optimizer.zero_grad()
