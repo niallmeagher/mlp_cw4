@@ -72,12 +72,10 @@ def load_checkpoint(agent, checkpoint_path):
     return start_epoch
 
 
-def load_best_hyperparams(db_path="~/shared_storage/optuna.db", study_name="ppo_20x20"):
+def load_best_hyperparams(db_path="/home/s2750319/shared_storage/optuna.db", study_name="ppo_20x20"):
     """
     Load the best hyperparameters from the Optuna study.
     """
-    # Expand ~ to full path
-    db_path = os.path.expanduser(db_path)
     storage = f"sqlite:///{db_path}"
     
     try:
