@@ -631,7 +631,7 @@ class DQNAgent:
         states, actions, rewards, next_states, dones, masks = zip(*batch)
         
         # Convert to tensors
-        states = torch.FloatTensor(np.array(states)).to(self.device)
+        states = torch.FloatTensor(np.array(states)).squeeze(1).to(self.device)
         actions = torch.LongTensor(np.array(actions)).to(self.device)  # Shape: (batch_size, 20)
         rewards = torch.FloatTensor(np.array(rewards)).to(self.device)
         next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
@@ -639,6 +639,7 @@ class DQNAgent:
         masks = torch.FloatTensor(np.array(masks)).to(self.device) if masks[0] is not None else None
         
         # Compute Q-values for the current states and selected actions
+        print(states.shape)
         current_q_values = self.policy_net(states, mask=masks)  # Shape: (batch_size, num_actions)
         current_q_values = current_q_values.gather(1, actions)  # Shape: (batch_size, 20)
         
