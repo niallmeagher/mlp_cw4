@@ -639,6 +639,7 @@ class DQNAgent:
         masks = torch.FloatTensor(np.array(masks)).to(self.device) if masks[0] is not None else None
         
         # Compute Q-values for the current states and selected actions
+        print(states.shape)
         current_q_values = self.policy_net(states, mask=masks)  # Shape: (batch_size, num_actions)
         current_q_values = current_q_values.gather(1, actions)  # Shape: (batch_size, 20)
         
