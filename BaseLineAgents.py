@@ -557,11 +557,8 @@ class DQNAgent:
         return reward
         
     def select_action(self, state, mask=None):
-        print("State shape before unsqueeze:", state.shape)  # Debug: Should be [channels, height, width] or [1, channels, height, width]
         state = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)  # Add batch dimension
-        print("State shape after unsqueeze:", state.shape)  # Debug: Should be [1, channels, height, width]
         state = state.squeeze(1)  # Remove extra dimension if present
-        print("State shape after squeeze:", state.shape)  # Debug: Should be [1, channels, height, width]
         
         if mask is not None:
             mask = torch.tensor(mask, dtype=torch.float32).unsqueeze(0).to(self.device)
@@ -630,7 +627,6 @@ class DQNAgent:
     def update(self):
         # Check if there are enough samples in the replay buffer
         if len(self.replay_buffer) < self.batch_size:
-            print("Replay buffer has fewer samples than batch size. Skipping update.")
             return
         
         # Sample a batch from the replay buffer
@@ -639,48 +635,36 @@ class DQNAgent:
         
         # Convert to tensors
         states = torch.FloatTensor(np.array(states)).squeeze(1).to(self.device)  # Shape: [batch_size, channels, height, width]
-        print("States shape:", states.shape)  # Debug: Should be [batch_size, channels, height, width]
         
         actions = torch.LongTensor(np.array(actions)).to(self.device)  # Shape: [batch_size, 20]
-        print("Actions shape:", actions.shape)  # Debug: Should be [batch_size, 20]
         
         rewards = torch.FloatTensor(np.array(rewards)).to(self.device)  # Shape: [batch_size]
         rewards = rewards.squeeze(1)  # Shape: [64]
-        print("Rewards shape:", rewards.shape)  # Debug: Should be [batch_size]
         
         next_states = torch.FloatTensor(np.array(next_states)).squeeze(1).to(self.device)  # Shape: [batch_size, channels, height, width]
-        print("Next states shape:", next_states.shape)  # Debug: Should be [batch_size, channels, height, width]
         
         dones = torch.FloatTensor(np.array(dones)).to(self.device)  # Shape: [batch_size]
-        print("Dones shape:", dones.shape)  # Debug: Should be [batch_size]
         
         masks = torch.FloatTensor(np.array(masks)).to(self.device) if masks[0] is not None else None  # Shape: [batch_size, num_actions]
-        print("Masks shape:", masks.shape if masks is not None else "None")  # Debug: Should be [batch_size, num_actions] or None
         
         # Compute Q-values for the current states using the policy network
         current_q_values = self.policy_net(states, mask=masks)  # Shape: [batch_size, num_actions]
-        print("Current Q-values shape:", current_q_values.shape)  # Debug: Should be [batch_size, num_actions]
         
         # Gather Q-values for the actions that were actually taken
         gathered_q_values = torch.gather(current_q_values, 1, actions)  # Shape: [batch_size, 20]
-        print("Gathered Q-values shape:", gathered_q_values.shape)  # Debug: Should be [batch_size, 20]
         
         # Compute Q-values for the next states using the target network
         with torch.no_grad():
             next_q_values = self.target_net(next_states, mask=masks)  # Shape: [batch_size, num_actions]
-            print("Next Q-values shape:", next_q_values.shape)  # Debug: Should be [batch_size, num_actions]
             
             # Use the maximum Q-value for the next state to compute the target
             max_next_q_values = next_q_values.max(1)[0]  # Shape: [batch_size]
-            print("Max next Q-values shape:", max_next_q_values.shape)  # Debug: Should be [batch_size]
             
             # Compute the target Q-values using the Bellman equation
             target_q_values = rewards + (1 - dones) * self.gamma * max_next_q_values  # Shape: [batch_size]
-            print("Target Q-values shape (before reshape):", target_q_values.shape)  # Debug: Should be [batch_size]
         
         # Reshape target_q_values to match gathered_q_values
         target_q_values = target_q_values.unsqueeze(1).expand(-1, 20)  # Shape: [batch_size, 20]
-        print("Target Q-values shape (after reshape):", target_q_values.shape)  # Debug: Should be [batch_size, 20]
         
         # Compute the loss (mean squared error between gathered_q_values and target_q_values)
         loss = F.mse_loss(gathered_q_values, target_q_values)

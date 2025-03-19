@@ -53,41 +53,30 @@ class smallNet(nn.Module):
         return q_values
     '''
     def forward(self, x, mask=None):
-        print("Input shape:", x.shape)  # Should be [64, 4, 20, 20]
         
         x = F.relu(self.conv1(x))
-        print("After conv1:", x.shape)  # Should be [64, 16, 20, 20]
         
         x = self.pool1(x)
-        print("After pool1:", x.shape)  # Should be [64, 16, 19, 19]
         
         x = self.dropout1(x)
         
         x = F.relu(self.conv2(x))
-        print("After conv2:", x.shape)  # Should be [64, 32, 19, 19]
         
         x = self.pool2(x)
-        print("After pool2:", x.shape)  # Should be [64, 32, 4, 4]
         
         x = self.dropout2(x)
         
         x = x.view(x.size(0), -1)
-        print("After view:", x.shape)  # Should be [64, 32*4*4 = 512]
         
         x = F.relu(self.fc1(x))
-        print("After fc1:", x.shape)  # Should be [64, 512]
         
         x = F.relu(self.fc2(x))
-        print("After fc2:", x.shape)  # Should be [64, 128]
         
         value = self.value_fc(x)
-        print("Value shape:", value.shape)  # Should be [64, 1]
         
         advantage = self.advantage_fc(x)
-        print("Advantage shape:", advantage.shape)  # Should be [64, 400]
         
         q_values = value + (advantage - advantage.mean(dim=1, keepdim=True))
-        print("Q-values shape:", q_values.shape)  # Should be [64, 400]
         
         return q_values
     
