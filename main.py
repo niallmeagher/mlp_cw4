@@ -85,19 +85,27 @@ def load_best_hyperparams(db_path="/home/s2750319/shared_storage/optuna.db", stu
             storage=storage
         )
         
-        cosine_trials = [
-            t for t in study.trials
-            if t.params.get("scheduler") == "cosine"
-        ]
-    
-            
-        best_trial = max(cosine_trials, key=lambda t: t.value)
+        # Get the best trial
+        best_trial = study.best_trial
+        print("Loaded best hyperparameters:")
+        for key, value in best_trial.params.items():
+            print(f"  {key}: {value}")
+        
         return best_trial.params
     
         
     except Exception as e:
         print(f"Error loading study: {e}")
-        return None
+        return {'lr': 0.0004729481181854,
+                'T_max': 42,
+                'clip_epsilon': 0.2922501321634734,
+                'entropy_coef': 0.0028446684491791,
+                'eta_min': 1.415085079651966e-06,
+                'gae_lambda': 0.9620433979461332,
+                'gamma': 0.9925934498951534,
+                'scheduler': 'cosine',
+                'value_loss_coef': 0.7493766069716047
+                }
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
     os.makedirs(folder1, exist_ok=True)
