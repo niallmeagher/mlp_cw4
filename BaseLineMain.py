@@ -274,6 +274,8 @@ def main(args, start_epoch=0, checkpoint_path=None):
             total_reward += res['reward'].item()
 
         loss = agent.update()
+        if loss == None:
+            loss = 0.0
         avg_reward = (total_reward) / (episodes_per_epoch -nones )
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
 
