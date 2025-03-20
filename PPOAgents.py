@@ -56,7 +56,7 @@ class RewardFunction(nn.Module):
 class PPOAgent:    
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.1,
                  value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type="cosine",T_max=10,eta_min=1e-5,
-                 gae_lambda=0.95, stochastic=False):
+                 gae_lambda=0.95, stochastic=False, normalise_rewards=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -80,6 +80,7 @@ class PPOAgent:
         self.gae_lambda = gae_lambda
 
         self.stochastic = stochastic
+        self.normalise_rewards = normalise_rewards
 
         self.scheduler = None
         if scheduler_type == "cosine":
@@ -160,7 +161,8 @@ class PPOAgent:
                 f.write(header)  # Write header back for CSV
             f.writelines(modified_lines)  # Write modified data
 
-    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None, output_folder_base = None):
+    def run_random_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None, output_folder_base = None,
+                                         normalise_rewards=False):
         num_grids = 10
         work_folder = work_folder or self.new_folder 
         
@@ -283,6 +285,8 @@ class PPOAgent:
             prop_ones_FB = total_ones_FB/total_FB
             prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
             difference = total_ones_base - total_ones_FB
+            if normalise_rewards:
+                difference /= total_ones_base
             if total_FB == 0:
                 continue
 
@@ -323,6 +327,7 @@ class PPOAgent:
         reward = self.run_random_cell2fire_and_analyze(action_indices,
                                                             parallel=True,
                                                             stochastic=self.stochastic,
+                                                            normalise_rewards=self.normalise_rewards,
                                                             work_folder=work_folder, output_folder = output_folder, output_folder_base= output_folder_base)
         
         return reward
