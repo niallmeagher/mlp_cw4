@@ -56,7 +56,7 @@ class RewardFunction(nn.Module):
 class PPOAgent:    
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.1,
                  value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type="cosine",T_max=10,eta_min=1e-5,
-                 gae_lambda=0.95, stochastic=False, normalise_rewards=False):
+                 gae_lambda=0.95, stochastic=False, normalise_rewards=False, single_sim=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -81,6 +81,7 @@ class PPOAgent:
 
         self.stochastic = stochastic
         self.normalise_rewards = normalise_rewards
+        self.single_sim = single_sim
 
         self.scheduler = None
         if scheduler_type == "cosine":
@@ -324,7 +325,13 @@ class PPOAgent:
         #reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
         grid[rows, cols] = 101
         self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
-        reward = self.run_random_cell2fire_and_analyze(action_indices,
+        if self.single_sim:
+            reward = self.run_single_cell2fire_and_analyze(action_indices,parallel=True,
+                                                            stochastic=self.stochastic,
+                                                            normalise_rewards=self.normalise_rewards,
+                                                            work_folder=work_folder, output_folder = output_folder)
+        else:
+            reward = self.run_random_cell2fire_and_analyze(action_indices,
                                                             parallel=True,
                                                             stochastic=self.stochastic,
                                                             normalise_rewards=self.normalise_rewards,
@@ -490,6 +497,118 @@ class PPOAgent:
         true_reward = 1 - (abs(action - TARGET_ACTION) / TARGET_ACTION)
         true_reward = max(0.0, true_reward)
         return torch.tensor(true_reward, dtype=torch.float32)
+    
+    def run_single_cell2fire_and_analyze(self, topk_indices, parallel = True, stochastic = True, work_folder = None, output_folder = None, output_folder_base = None,
+                                         normalise_rewards=False):
+        num_grids = 10
+        work_folder = work_folder or self.new_folder 
+        
+        self.modify_csv(os.path.join(work_folder, "Data.csv"),os.path.join(work_folder, "Data.csv"), topk_indices, 'NF')
+        self.modify_first_column(os.path.join(work_folder, "Data.dat"),os.path.join(work_folder, "Data.dat"), topk_indices, is_csv=False)
+        
+        
+        if stochastic == True:
+            FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
+            ROS = str(np.round(np.random.uniform(0.0, 1.0), 2))
+            IR = str(np.random.randint(1, 6))
+            HF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            seed = str(np.random.randint(1, 7))
+            FF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            BF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+            EF = str(np.round(np.random.uniform(0.5, 2.0), 2))
+        else:
+            FPL = str(np.round(np.random.uniform(0.5, 3.0), 2))
+            ROS = str(0.1)
+            IR = str(4)
+            HF = str(1.2)
+            seed = str(np.random.randint(1, 7))
+            FF = str(1.2)
+            BF = str(1.2)
+            EF = str(1.2)
+
+        def run_command(command):
+            result = subprocess.run(command, check=True,  # Set check=False to avoid raising exception immediately
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                print(f"Command failed: {command}")
+                print("Stdout:", result.stdout)
+                print("Stderr:", result.stderr)
+            return result
+
+        try:
+            cmd = [
+                f"{HOME_DIR}./Cell2Fire",
+                "--input-instance-folder", work_folder,
+                "--output-folder", output_folder,
+                "--ignitions",
+                "--sim-years", str(1),
+                "--nsims", str(num_grids),
+                "--grids", str(32),
+                "--final-grid",
+                "--Fire-Period-Length", FPL,
+                "--weather", "rows",
+                "--nweathers", str(1),
+                "--output-messages",
+                "--ROS-CV", ROS,
+                "--seed", seed,
+                "--IgnitionRad", IR,
+                "--HFactor", HF,
+                "--FFactor", FF,
+                "--BFactor", BF,
+                "--EFactor", EF
+            ]
+
+            if parallel == False:
+                subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                with TPE(max_workers=mp.cpu_count()) as executor:
+                    future1 = executor.submit(run_command, cmd)           
+                    concurrent.futures.wait([future1])
+
+        except subprocess.CalledProcessError as e:
+            print("Exception raised")
+        
+            return None
+        
+        firebreak_grids_folder = os.path.join(output_folder, "Grids")
+        computed_values = []
+        
+        for i in range(1, num_grids + 1):
+            csv_file_FB = os.path.join(firebreak_grids_folder, f"Grids{i}", "ForestGrid08.csv")
+            try:
+                data_FB = np.loadtxt(csv_file_FB, delimiter=',')
+            except Exception as e:
+                continue
+
+            flat_data_FB = data_FB.flatten()
+            total_zeros_FB = np.sum(flat_data_FB == 0)
+            total_ones_FB = np.sum(flat_data_FB == 1)
+            total_FB = total_ones_FB + total_zeros_FB
+            prop_ones_FB = total_ones_FB/total_FB
+            prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
+            if total_FB == 0:
+                continue
+
+            penalty_value = -0
+            rows, cols = data_FB.shape
+            
+            penalty = -0.1
+            for index in topk_indices:
+               r, c = index // cols, index % cols
+               neighbors = data_FB[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
+               if np.all(neighbors == 0):  
+                   penalty += penalty_value
+            difference += penalty
+            
+            computed_values.append(difference)
+            print("DifferenceValue:", difference)
+        if not computed_values:
+            return None
+
+        final_average = np.mean(computed_values)
+        
+        print("FINAL", final_average)
+        return final_average
 
 '''
     def reward_function(self, state, action, next_state):
@@ -501,3 +620,4 @@ class PPOAgent:
         reward = 0.0  # Replace with your reward logic
         return reward
 '''
+
