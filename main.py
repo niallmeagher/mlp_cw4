@@ -258,7 +258,7 @@ def main(args):
                      )
     
     csvf = "episode_results.csv"
-    csv_file = os.path.join(f"{HOME_DIR2}",csvf)
+    csv_file = os.path.join(f"{output_dir}",csvf)
     if not os.path.exists(csv_file):
         with open(csv_file, "w", newline="") as f:
             writer = csv.writer(f)
