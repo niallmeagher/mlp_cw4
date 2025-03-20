@@ -3,7 +3,7 @@
 #
 # example usage:
 # ```
-# sbatch batchjob.sh 1000 10 Sub20x20 Sub20x20
+# sbatch batchjob.sh 1000 10 Sub20x20 Sub20x20 --stochastic --normalise --single_sim
 # ```
 #
 # or, equivalently and as intended, with provided `run_experiement`:
@@ -128,10 +128,39 @@ rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_
 
 NumEpochs=$1 # eg 1000
 NumEpisodes=$2 # eg 10
-InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/$3 # eg Sub20x20
-OutputFileDirectory=${SCRATCH_HOME}/Cell2Fire/results/$4 # eg Sub20x20
+InputFolder=$3
+OutputFolder=$4
+InputFileDirectory=${SCRATCH_HOME}/Cell2Fire/data/${InputFolder} # eg Sub20x20
+OutputFileDirectory=${SCRATCH_HOME}/Cell2Fire/results/${OutputFolder} # eg Sub20x20
 
-COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}""
+# Process additional flags
+shift 4
+stochastic_flag=""
+normalise_flag=""
+single_sim_flag=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --stochastic)
+            stochastic_flag="--stochastic"
+            shift
+            ;;
+        --normalise)
+            normalise_flag="--normalise"
+            shift
+            ;;
+        --single_sim)
+            single_sim_flag="--single_sim"
+            shift
+            ;;
+        *)
+            echo "Error: Unknown option '$1'"
+            exit 1
+            ;;
+    esac
+done
+
+COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}" ${stochastic_flag} ${normalise_flag} ${single_sim_flag}"
 echo "Running provided command: ${COMMAND}"
 eval "${COMMAND}"
 echo "Command ran successfully!"
@@ -146,11 +175,11 @@ echo "Command ran successfully!"
 echo "Moving output data back to DFS"
 
 
-Output=${SCRATCH_HOME}/Cell2Fire/data/${3}_Test/Checkpoints
+Output=${SCRATCH_HOME}/Cell2Fire/data/${InputFolder}_Test/Checkpoints
 results = ${SCRATCH_HOME}/Cell2Fire/results/episode_results.csv
 results2 = ${SCRATCH_HOME}/Cell2Fire/results/Epoch_Stats.csv
 src_path=${Output}
-dest_path=${data_path}/mlp_cw4/results/$4
+dest_path=${data_path}/mlp_cw4/results/${OutputFolder}
 rsync  --archive --update --compress --progress ${src_path}/ ${dest_path}
 rsync  --archive --update --compress --progress ${results}/ ${dest_path}
 rsync  --archive --update --compress --progress ${results2}/ ${dest_path}
