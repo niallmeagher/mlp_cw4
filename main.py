@@ -251,7 +251,10 @@ def main(args):
                      gae_lambda=params["gae_lambda"],
                      scheduler_type=params["scheduler"],
                      T_max=params["T_max"],      
-                     eta_min=params["eta_min"]  
+                     eta_min=params["eta_min"],
+                     stochastic=args['stochastic'],
+                     normalise_rewards=args['normalise_rewards'],
+                     single_sim=args['single_sim']
                      )
     
     csvf = "episode_results.csv"
@@ -375,5 +378,8 @@ if __name__ == '__main__':
     parser.add_argument('-i','--input_dir', help='Path to folder containing input data', required=True)
     parser.add_argument('-o','--output_dir', help='Path to folder where output will be stored', required=True)
     parser.add_argument('-c', '--checkpoint_path', help='Path to checkpoint file if you are loading one', required=False, default=None)
+    parser.add_argument('-s', '--stochastic', help='True to enable stochastic Cell2Fire sim', required=False, default=False)
+    parser.add_argument('-nr', '--normalise_rewards', help='Whether to normalise rewards for PPOAgent', required=False, default=False)
+    parser.add_argument('-g', '--single_sim', help='Whether to run a single or double Cell2Fire sim', required=False, default=False)
     args = vars(parser.parse_args())
     main(args)
