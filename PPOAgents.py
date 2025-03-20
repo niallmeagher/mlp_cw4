@@ -592,6 +592,7 @@ class PPOAgent:
             penalty_value = -0
             rows, cols = data_FB.shape
             
+            difference = 0
             penalty = -0.1
             for index in topk_indices:
                r, c = index // cols, index % cols
