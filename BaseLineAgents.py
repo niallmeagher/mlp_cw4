@@ -64,6 +64,8 @@ class DQNAgent:
         self.update_epochs = update_epochs
         self.learned_reward = learned_reward
 
+        self.k = -1
+
         self.epsilon = 1.0  # Initial exploration rate
         self.epsilon_min = 0.01  # Minimum exploration rate
         self.epsilon_decay = 0.995 
@@ -532,7 +534,7 @@ class DQNAgent:
         return final_average
     
 
-    def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None):
+    def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None, num_simulations = 10):
     
         header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
         
@@ -547,12 +549,21 @@ class DQNAgent:
         #reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
         grid[rows, cols] = 101
         self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
-        reward = self.run_random_cell2fire_and_analyze(action_indices,
-                                                       parallel=True,
-                                                       stochastic=False,
-                                                       work_folder=work_folder, 
-                                                       output_folder = output_folder, 
-                                                       output_folder_base= output_folder_base)
+        
+        if(True):
+            total_burned_cells = 0
+            for _ in num_simulations:
+                burned_cells = self.run_Cell2FireOnce_ReturnBurnMap(work_folder)
+                total_burned_cells += np.sum(burned_cells)
+            average_burned_cells = total_burned_cells / num_simulations
+            reward = average_burned_cells*self.k
+        else:
+            reward = self.run_random_cell2fire_and_analyze(action_indices,
+                                                           parallel=True,
+                                                           stochastic=False,
+                                                           work_folder=work_folder, 
+                                                           output_folder = output_folder, 
+                                                           output_folder_base= output_folder_base)
         
         return reward
         

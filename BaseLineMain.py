@@ -171,7 +171,7 @@ def simulate_single_episode(agent, state, mask, input_folder):
         # Select 20 actions (firebreak locations)
         actions = agent.select_action(state, mask)
         # Simulate the fire episode
-        true_reward = agent.simulate_fire_episode(actions, work_folder=temp_work_dir, output_folder=temp_output_dir, output_folder_base=temp_output_base_dir)
+        true_reward = agent.simulate_fire_episode(actions, work_folder=temp_work_dir, output_folder=temp_output_dir, output_folder_base=temp_output_base_dir, num_simulations=10)
         
         if true_reward is None:  # Check if reward is None
             print("Warning: Reward is None from simulate_fire_episode. Episode failed.")
