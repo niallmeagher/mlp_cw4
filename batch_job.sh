@@ -179,8 +179,10 @@ Output=${SCRATCH_HOME}/Cell2Fire/data/${InputFolder}_Test/Checkpoints
 results=${OutputFileDirectory}
 src_path=${Output}
 dest_path=${data_path}/mlp_cw4/results/${OutputFolder}
-rsync  --archive --update --compress --progress ${src_path}/ ${dest_path}
-rsync  --archive --update --compress --progress ${results}/ ${dest_path}
+
+mkdir -p ${dest_path}
+rsync  --archive --update --compress --progress ${src_path}/ ${dest_path}/
+rsync  --archive --update --compress --progress ${results}/ ${dest_path}/
 
 # Delete folders from scratch space
 rm -rf ${SCRATCH_HOME}
