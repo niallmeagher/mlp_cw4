@@ -304,6 +304,7 @@ def main(args):
         while not os.path.exists(folder_stored):
             continue
         print('Weathers_Stored populated!')
+        print(os.listdir(folder_stored))
         tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
         epoch_rewards = []
