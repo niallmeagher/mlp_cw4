@@ -552,7 +552,7 @@ class DQNAgent:
         
         if(True):
             total_burned_cells = 0
-            for _ in num_simulations:
+            for _ in range(num_simulations):
                 burned_cells = self.run_Cell2FireOnce_ReturnBurnMap(work_folder)
                 total_burned_cells += np.sum(burned_cells)
             average_burned_cells = total_burned_cells / num_simulations
