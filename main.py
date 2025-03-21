@@ -300,6 +300,10 @@ def main(args):
         folder_stored = os.path.join(input_dir, "Weathers_Stored")
         if os.path.exists(folder_sample_from) and not os.path.exists(folder_stored):
             os.rename(folder_sample_from, folder_stored)
+        print('Populating Weathers_Stored...')
+        while not os.path.exists(folder_stored):
+            continue
+        print('Weathers_Stored populated!')
         tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
         epoch_rewards = []
