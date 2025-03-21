@@ -176,7 +176,7 @@ echo "Moving output data back to DFS"
 
 
 Output=${SCRATCH_HOME}/Cell2Fire/data/${InputFolder}_Test/Checkpoints
-results = ${OutputFileDirectory}
+results=${OutputFileDirectory}
 src_path=${Output}
 dest_path=${data_path}/mlp_cw4/results/${OutputFolder}
 rsync  --archive --update --compress --progress ${src_path}/ ${dest_path}
