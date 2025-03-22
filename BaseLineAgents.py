@@ -610,7 +610,7 @@ class DQNAgent:
                 action = torch.tensor(action, dtype=torch.long).to(self.device)
                 q_values = self.policy_net(state) # Shape: [1, 400]
 
-                q_values_expanded = q_values.repeat(action.size(), 1) # Shape: [20, num_actions]
+                q_values_expanded = q_values.repeat(action.size(0), 1) # Shape: [20, num_actions]
                 action_loss = F.cross_entropy(q_values_expanded, action)
 
                 demonstration_logits = q_values_expanded.gather(1, action.unsqueeze(1)) # Shape: [20, 1]
