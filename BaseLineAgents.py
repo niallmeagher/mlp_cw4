@@ -550,7 +550,7 @@ class DQNAgent:
         grid[rows, cols] = 101
         self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
         
-        if(True):
+        if(False):
             total_burned_cells = 0
             for _ in range(num_simulations):
                 burned_cells = self.run_Cell2FireOnce_ReturnBurnMap(work_folder)
