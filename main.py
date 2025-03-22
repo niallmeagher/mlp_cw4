@@ -351,7 +351,6 @@ def main(args):
         avg_reward = (total_reward) / (episodes_per_epoch -nones )
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
 
-        output_file.write(f"{epoch+1},{avg_reward:.4f}\n")
 
         with open(csv_file, "a", newline="") as f:
             writer = csv.writer(f)
