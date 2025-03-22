@@ -608,24 +608,12 @@ class DQNAgent:
             for state, action in demonstrations:
                 state = torch.tensor(state, dtype = torch.float32).to(self.device)
                 action = torch.tensor(action, dtype=torch.long).to(self.device)
-                q_values = self.policy_net(state)
-                q_values_expanded = q_values.repeat(action.size(0), 1)
+                q_values = self.policy_net(state) # Shape: [1, 400]
 
+                target_q_values = torch.zeros_like(q_values)
+                target_q_values[0, action] = 1.0
 
-                action_loss = F.cross_entropy(q_values_expanded, action)
-
-                demonstrator_logits = q_values_expanded.gather(1, action.unsqueeze(1))
-                otherLogits = q_values.clone()
-                otherLogits.scatter_(1, action.unsqueeze(1), -1e10)
-
-                maxOtherLogits = otherLogits.max(dim=1)[0]
-
-                marginLoss = F.relu(maxOtherLogits - demonstrator_logits + margin).mean()
-
-                l2_loss = 0.0
-                for param in self.policy_net.parameters():
-                    l2_loss += torch.norm(param, p=2)
-                loss = action_loss + marginLoss + l2_weight * l2_loss
+                loss = F.mse_loss(q_values, target_q_values)
 
                 optimizer.zero_grad()
                 loss.backward()
