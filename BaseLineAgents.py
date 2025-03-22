@@ -602,20 +602,18 @@ class DQNAgent:
             return torch.tensor(true_reward, dtype=torch.float32, device=self.device)
     
     def preTraining(self, demonstrations, num_epochs=100, margin = 0.1, l2_weight = 0.01):
-        optimizer = torch.optim.Adam(self.network.parameters(), lr=self.optimizer.param_groups[0]['lr'])
+        optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=self.optimizer.param_groups[0]['lr'])
         for epoch in range(num_epochs):
             epochLoss = 0.0
             for state, action in demonstrations:
                 state = torch.tensor(state, dtype = torch.float32).to(self.device)
                 action = torch.tensor(action, dtype=torch.long).to(self.device)
-                tabular = torch.zeros(1, 8, 11).to(self.device)
-                action_logits, value =  self.network(state, tabular = tabular)
+                q_values = self.policy_net(state)
 
-                logits_expanded = action_logits.repeat(action.size(0), 1)
-                action_loss = F.cross_entropy(logits_expanded, action)
+                action_loss = F.cross_entropy(q_values, action)
 
-                demonstrator_logits = logits_expanded.gather(1, action.unsqueeze(1))
-                otherLogits = logits_expanded.clone()
+                demonstrator_logits = q_values.gather(1, action.unsqueeze(1))
+                otherLogits = q_values.clone()
                 otherLogits.scatter_(1, action.unsqueeze(1), -1e10)
 
                 maxOtherLogits = otherLogits.max(dim=1)[0]
@@ -623,7 +621,7 @@ class DQNAgent:
                 marginLoss = F.relu(maxOtherLogits - demonstrator_logits + margin).mean()
 
                 l2_loss = 0.0
-                for param in self.network.parameters():
+                for param in self.policy_net.parameters():
                     l2_loss += torch.norm(param, p=2)
                 loss = action_loss + marginLoss + l2_weight * l2_loss
 
