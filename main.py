@@ -358,7 +358,7 @@ def main(args):
                 identifier = f"Epoch_{epoch+1}_Episode_{ep+1}"
                 writer.writerow([identifier, r, v])
         save_checkpoint(agent, epoch+1, checkpoint_dir = f"{input_dir}_Test/Checkpoints")
-        avg_loss, avg_policy_loss, avg_value_loss, avg_entropy = agent.update(trajectories)
+
         output_file.write(f"{epoch+1},{avg_reward:.4f},{avg_loss:.4f},{avg_policy_loss:.4f},{avg_value_loss:.4f},{avg_entropy:.4f}\n")
         output_file.flush() 
         end_time = time.time()
