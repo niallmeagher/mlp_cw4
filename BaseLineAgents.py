@@ -609,6 +609,10 @@ class DQNAgent:
                 state = torch.tensor(state, dtype = torch.float32).to(self.device)
                 action = torch.tensor(action, dtype=torch.long).to(self.device)
                 q_values = self.policy_net(state)
+                print(q_values)
+                print(q_values.shape)
+                print(action)
+                print(action.shape)
 
                 action_loss = F.cross_entropy(q_values, action)
 
