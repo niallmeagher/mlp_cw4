@@ -240,22 +240,25 @@ def main(args):
     output_folder=f'{output_dir}'
     output_folder_base=f'{output_dir}_base/'
 
-    params = load_best_hyperparams()
+    # params = load_best_hyperparams()
+    # agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
+    #                  input_channels=4, learned_reward=False,
+    #                  lr=params['lr'],
+    #                  clip_epsilon=params["clip_epsilon"],
+    #                  value_loss_coef=params["value_loss_coef"],
+    #                  entropy_coef=params["entropy_coef"],
+    #                  gamma=params["gamma"],
+    #                  gae_lambda=params["gae_lambda"],
+    #                  scheduler_type=params["scheduler"],
+    #                  T_max=params["T_max"],      
+    #                  eta_min=params["eta_min"],
+    #                  stochastic=args['stochastic'],
+    #                  normalise_rewards=args['normalise_rewards'],
+    #                  single_sim=args['single_sim']
+    #                  )
+    
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
-                     input_channels=4, learned_reward=False,
-                     lr=params['lr'],
-                     clip_epsilon=params["clip_epsilon"],
-                     value_loss_coef=params["value_loss_coef"],
-                     entropy_coef=params["entropy_coef"],
-                     gamma=params["gamma"],
-                     gae_lambda=params["gae_lambda"],
-                     scheduler_type=params["scheduler"],
-                     T_max=params["T_max"],      
-                     eta_min=params["eta_min"],
-                     stochastic=args['stochastic'],
-                     normalise_rewards=args['normalise_rewards'],
-                     single_sim=args['single_sim']
-                     )
+                     input_channels=4, learned_reward=False)
     
     csvf = "episode_results.csv"
     csv_file = os.path.join(f"{output_dir}",csvf)
