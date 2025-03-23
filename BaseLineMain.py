@@ -14,6 +14,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor as TPE
 from concurrent.futures import ProcessPoolExecutor as PPE
 import multiprocessing as mp
+from datetime import datetime
 
 import subprocess
 from BaseLineAgents import DQNAgent  # Changed to DQNAgent
@@ -22,6 +23,37 @@ username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
 HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
 
+
+def save_results_to_csv(results, output_dir, filename="experiment_results.csv"):
+    """
+    Save experiment results to a CSV file.
+
+    Args:
+        results (list of dict): List of dictionaries containing experiment results.
+        output_dir (str): Directory where the CSV file will be saved.
+        filename (str): Name of the CSV file (default: "experiment_results.csv").
+    """
+    # Ensure the output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Define the full path to the CSV file
+    csv_file_path = os.path.join(output_dir, filename)
+
+    # Define the CSV fieldnames (column headers)
+    fieldnames = results[0].keys() if results else []
+
+    # Write results to the CSV file
+    with open(csv_file_path, mode="w", newline="") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        
+        # Write the header
+        writer.writeheader()
+        
+        # Write the rows
+        for result in results:
+            writer.writerow(result)
+
+    print(f"Results saved to {csv_file_path}")
 
 def save_checkpoint(agent, epoch, checkpoint_dir):
     """Save training checkpoint with model state"""
@@ -171,7 +203,7 @@ def simulate_single_episode(agent, state, mask, input_folder):
         # Select 20 actions (firebreak locations)
         actions = agent.select_action(state, mask)
         # Simulate the fire episode
-        true_reward = agent.simulate_fire_episode(actions, work_folder=temp_work_dir, output_folder=temp_output_dir, output_folder_base=temp_output_base_dir, num_simulations=10)
+        true_reward, average_burned_cells = agent.simulate_fire_episode(actions, work_folder=temp_work_dir, output_folder=temp_output_dir, output_folder_base=temp_output_base_dir, num_simulations=10)
         
         if true_reward is None:  # Check if reward is None
             print("Warning: Reward is None from simulate_fire_episode. Episode failed.")
@@ -194,6 +226,7 @@ def simulate_single_episode(agent, state, mask, input_folder):
         'next_state': state.detach(),  # Next state is the same since the episode ends after one step
         'done': torch.tensor(1, dtype=torch.float32),  # Episode ends after one step
         'mask': mask.detach(),
+        'ABCells': average_burned_cells
     }
     
 
@@ -248,6 +281,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
 
     for epoch in range(start_epoch, num_epochs):
         total_reward = 0.0
+        totalABCells = 0.0
     
         #folder_sample_from = os.path.join(input_dir, "Weathers")
         #folder_stored = os.path.join(input_dir, "Weathers_Stored")
@@ -271,13 +305,16 @@ def main(args, start_epoch=0, checkpoint_path=None):
                 nones+=1
                 continue
             agent.store_transition(res['state'], res['actions'], res['reward'], res['next_state'], res['done'], res['mask'])
+            totalABCells += res['ABCells']
             total_reward += res['reward'].item()
 
         loss = agent.update()
         if loss == None:
             loss = 0.0
         avg_reward = (total_reward) / (episodes_per_epoch -nones )
+        avg_BCells = totalABCells / (episodes_per_epoch - nones)
         print(f"Epoch {epoch+1}/{num_epochs} - Average True Reward: {avg_reward:.4f}")
+        print(avg_BCells)
 
         save_checkpoint(agent, epoch + 1, checkpoint_dir=f"{input_dir}_Test/Checkpoints")
         output_file.write(f"{epoch + 1},{avg_reward:.4f},{loss:.4f}\n")
@@ -288,6 +325,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
         print(f"Elapsed time: {elapsed_time:.4f} seconds")
 
     # Save the final model
+    output_dir
     final_path = "final_model.pt"
     torch.save(agent.policy_net.state_dict(), final_path)
     print(f"Final model saved at {final_path}")
