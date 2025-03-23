@@ -482,6 +482,7 @@ class DQNAgent:
         base_grids_folder = os.path.join(output_folder_base, "Grids")
         firebreak_grids_folder = os.path.join(output_folder, "Grids")
         computed_values = []
+        total_burnt = []
         
         for i in range(1, num_grids + 1):
             csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
@@ -522,16 +523,17 @@ class DQNAgent:
            #     if np.all(neighbors == 0):  
           #          penalty += penalty_value
           #  difference += penalty
-            
+            total_burnt.append(total_ones_FB)
             computed_values.append(difference)
             print("DifferenceValue:", difference)
         if not computed_values:
             return None
 
         final_average = np.mean(computed_values)
+        final_burnt = np.mean(total_burnt)
         
         print("FINAL", final_average)
-        return final_average
+        return final_average, final_burnt
     
 
     def simulate_fire_episode(self, action_indices, work_folder=None, output_folder = None, output_folder_base = None, num_simulations = 10):
@@ -550,7 +552,7 @@ class DQNAgent:
         grid[rows, cols] = 101
         self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
         
-        if(True):
+        if(False):
             total_burned_cells = 0
             for _ in range(num_simulations):
                 burned_cells = self.run_Cell2FireOnce_ReturnBurnMap(work_folder)
@@ -558,7 +560,7 @@ class DQNAgent:
             average_burned_cells = total_burned_cells / num_simulations
             reward = average_burned_cells*self.k
         else:
-            reward = self.run_random_cell2fire_and_analyze(action_indices,
+            reward, average_burned_cells = self.run_random_cell2fire_and_analyze(action_indices,
                                                            parallel=True,
                                                            stochastic=False,
                                                            work_folder=work_folder, 
