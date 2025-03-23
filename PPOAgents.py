@@ -458,7 +458,7 @@ class PPOAgent:
         
             new_log_probs = torch.stack(new_log_probs)
         
-            entropy = dist.entropy().mean()
+
             
             #For old entropy
            # entropy = dist.entropy().mean()
