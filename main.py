@@ -98,13 +98,13 @@ def load_best_hyperparams(db_path="/home/s2750319/shared_storage/optuna.db", stu
         print(f"Error loading study: {e}")
         return {'lr': 0.0007112714510323,
                 'T_max': 42,
-                'clip_epsilon': 0.2497741529163497,
-                'entropy_coef': 0.0020622640186278,
+                'clip_epsilon': 0.2922501321634734,
+                'entropy_coef': 0.0028446684491791,
                 'eta_min': 1.415085079651966e-06,
-                'gae_lambda': 0.9461413974687652,
-                'gamma': 0.9932907418871656,
-                'scheduler': 'step',
-                'value_loss_coef': 0.2642195827652803
+                'gae_lambda': 0.9620433979461332,
+                'gamma': 0.9925934498951534,
+                'scheduler': 'cosine',
+                'value_loss_coef': 0.7493766069716047
                 }
 
 def load_random_csv_as_tensor(folder1, folder2, drop_first_n_cols=2, has_header=True):
@@ -240,25 +240,25 @@ def main(args):
     output_folder=f'{output_dir}'
     output_folder_base=f'{output_dir}_base/'
 
-    # params = load_best_hyperparams()
-    # agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
-    #                  input_channels=4, learned_reward=False,
-    #                  lr=params['lr'],
-    #                  clip_epsilon=params["clip_epsilon"],
-    #                  value_loss_coef=params["value_loss_coef"],
-    #                  entropy_coef=params["entropy_coef"],
-    #                  gamma=params["gamma"],
-    #                  gae_lambda=params["gae_lambda"],
-    #                  scheduler_type=params["scheduler"],
-    #                  T_max=params["T_max"],      
-    #                  eta_min=params["eta_min"],
-    #                  stochastic=args['stochastic'],
-    #                  normalise_rewards=args['normalise_rewards'],
-    #                  single_sim=args['single_sim']
-    #                  )
-    
+    params = load_best_hyperparams()
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
-                     input_channels=4, learned_reward=False, scheduler_type='cosine')
+                     input_channels=4, learned_reward=False,
+                     lr=params['lr'],
+                     clip_epsilon=params["clip_epsilon"],
+                     value_loss_coef=params["value_loss_coef"],
+                     entropy_coef=params["entropy_coef"],
+                     gamma=params["gamma"],
+                     gae_lambda=params["gae_lambda"],
+                     scheduler_type=params["scheduler"],
+                     T_max=params["T_max"],      
+                     eta_min=params["eta_min"],
+                     stochastic=args['stochastic'],
+                     normalise_rewards=args['normalise_rewards'],
+                     single_sim=args['single_sim']
+                     )
+    
+    # agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
+    #                  input_channels=4, learned_reward=False)
     
     csvf = "episode_results.csv"
     csv_file = os.path.join(f"{output_dir}",csvf)
