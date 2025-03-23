@@ -565,7 +565,7 @@ class DQNAgent:
                                                            output_folder = output_folder, 
                                                            output_folder_base= output_folder_base)
         
-        return reward
+        return reward, average_burned_cells
         
     def select_action(self, state, mask=None):
         state = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)  # Add batch dimension
