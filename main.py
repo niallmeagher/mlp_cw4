@@ -258,7 +258,7 @@ def main(args):
     #                  )
     
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
-                     input_channels=4, learned_reward=False)
+                     input_channels=4, learned_reward=False, scheduler_type='cosine')
     
     csvf = "episode_results.csv"
     csv_file = os.path.join(f"{output_dir}",csvf)
