@@ -56,7 +56,7 @@ class RewardFunction(nn.Module):
 class PPOAgent:
     
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=1e-3, clip_epsilon=0.2,
-                 value_loss_coef=0.5, entropy_coef=0.0075, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type='cosine',T_max=500,eta_min=1e-5,mini_batch_size = 64):
+                 value_loss_coef=0.5, entropy_coef=0.0075, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type='cosine',T_max=500,eta_min=1e-5):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -95,7 +95,6 @@ class PPOAgent:
             self.reward_optimizer = torch.optim.Adam(self.reward_net.parameters(), lr=lr)
         else:
             self.reward_net = None
-        self.mini_batch_size = mini_batch_size
 
     def read_asc_file(self, filename):
         with open(filename, 'r') as f:
@@ -407,90 +406,6 @@ class PPOAgent:
 
         with torch.no_grad():
             next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
-        advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
-
-        returns = (returns - returns.mean()) / (returns.std() + 1e-8)
-        returns = returns.detach()
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-        advantages = advantages.detach()
-
-        scaler = GradScaler()
-        policy_losses = []
-        value_losses = []
-        entropies = []
-        losses = []
-
-        num_samples = states.size(0)
-        indices = np.arange(num_samples)
-        batch_size = self.mini_batch_size
-
-        for _ in range(self.update_epochs):
-            np.random.shuffle(indices) #shuffle
-            for start in range(0, num_samples, batch_size):
-                end = start + batch_size
-                batch_indices = indices[start:end]
-
-                batch_states = states[batch_indices]
-                batch_masks = masks[batch_indices]
-                batch_weather = weather[batch_indices]
-                batch_actions = actions[batch_indices]
-                batch_old_log_probs = old_log_probs[batch_indices]
-                batch_returns = returns[batch_indices]
-                batch_advantages = advantages[batch_indices]
-                # Get current logits and values from the network
-                actor_logits, values = self.network(batch_states, tabular=batch_weather, mask=batch_masks)
-                dist_softmax = F.softmax(actor_logits, dim=1)
-                dist = Categorical(probs=dist_softmax)
-
-                new_log_probs = []
-                for i in range(batch_states.size(0)):
-                    state_actions = batch_actions[i]
-                    state_probs = dist_softmax[i:i+1]
-                    state_dist = Categorical(probs=state_probs)
-                    state_log_probs = state_dist.log_prob(state_actions).sum()
-                    new_log_probs.append(state_log_probs)
-                new_log_probs = torch.stack(new_log_probs)
-                entropy = dist.entropy().mean()
-                ratio = torch.exp(new_log_probs - batch_old_log_probs)
-                surr1 = ratio * batch_advantages
-                surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * batch_advantages
-                policy_loss = -torch.min(surr1, surr2).mean()
-
-                value_loss = F.mse_loss(values.squeeze(-1), batch_returns)
-                loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
-
-                self.optimizer.zero_grad()
-                scaler.scale(loss).backward()
-                torch.cuda.synchronize()
-                scaler.step(self.optimizer)
-                torch.cuda.synchronize()
-                scaler.update()
-
-                policy_losses.append(policy_loss.item())
-                value_losses.append(value_loss.item())
-                entropies.append(entropy.item())
-                losses.append(loss.item())
-            if self.scheduler is not None:
-                    self.scheduler.step()
-        avg_loss = np.mean(losses)
-        avg_policy_loss = np.mean(policy_losses)
-        avg_value_loss = np.mean(value_losses)
-        avg_entropy = np.mean(entropies)
-        return avg_loss, avg_policy_loss, avg_value_loss, avg_entropy
-    '''
-    def update(self, trajectories):
-        states = trajectories['states'].to(self.device)
-        masks = trajectories['masks'].to(self.device)
-        weather = trajectories['weather'].to(self.device)
-        actions = trajectories['actions'].to(self.device)
-        continuous_actions = trajectories['continuous_action'].to(self.device)
-        old_log_probs = trajectories['log_probs'].to(self.device).detach()
-        rewards = trajectories['rewards'].to(self.device)
-        dones = trajectories['dones'].to(self.device)
-        old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
-
-        with torch.no_grad():
-            next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
 
         advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
        # print("RETURNS:", returns)
@@ -510,24 +425,7 @@ class PPOAgent:
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
             dist_softmax = F.softmax(actor_logits,dim=1)
             dist = Categorical(probs = dist_softmax)
-    '''
-          #  new_log_probs = []
-        #    entropies2 = []
-          #  for i in range(states.size(0)):
-          #  
-          #      state_logits, _ = self.network(states[i:i+1], tabular=weather[i:i+1],mask=masks[i:i+1] if masks is not None else None)
-          #      new_probs = F.softmax(state_logits, dim=1)
-          #      new_dist = Categorical(probs=new_probs)
-        
-           #     new_log_probs.append(new_dist.log_prob(actions[i]).sum())
-                #For new entropy
-          #      entropies2.append(new_dist.entropy())
-        
-         #   new_log_probs = torch.stack(new_log_probs)
-            #New Entropy
-         #   entropy = torch.stack(entropies2).mean()
-    '''
-            
+    
             batch_size = states.size(0)
             flat_actions = actions.view(-1)
             new_log_probs = []
@@ -577,7 +475,7 @@ class PPOAgent:
         avg_value_loss = np.mean(value_losses)
         avg_entropy = np.mean(entropies)
         return avg_loss, avg_policy_loss, avg_value_loss, avg_entropy
-        '''
+        
 
     def simulate_test_episode(self, state, action):
         TARGET_ACTION = 200
