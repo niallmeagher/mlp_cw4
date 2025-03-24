@@ -420,64 +420,58 @@ class PPOAgent:
         entropies = []
         losses = []
 
-        # Flatten the data for easier batching
-        flat_states = states.reshape(-1, *states.shape[2:])
-        flat_masks = masks.reshape(-1, *masks.shape[2:]) if masks is not None else None
-        flat_weather = weather.reshape(-1, *weather.shape[2:])
-        flat_actions = actions.reshape(-1, *actions.shape[2:])
-        flat_old_log_probs = old_log_probs.reshape(-1, *old_log_probs.shape[2:])
-        flat_returns = returns.reshape(-1, *returns.shape[2:])
-        flat_advantages = advantages.reshape(-1, *advantages.shape[2:])
-        flat_continuous_actions = continuous_actions.reshape(-1, *continuous_actions.shape[2:])
-        flat_old_values = old_values.reshape(-1, *old_values.shape[2:])
-
+        num_samples = states.size(0)
+        indices = np.arange(num_samples)
+        batch_size = self.mini_batch_size
 
         for _ in range(self.update_epochs):
-            # Generate indices for batching
-            num_samples = flat_states.size(0)
-            indices = torch.randperm(num_samples, device=self.device)
-
-            for start in range(0, num_samples, self.mini_batch_size):
-                end = start + self.mini_batch_size
+            np.random.shuffle(indices) #shuffle
+            for start in range(0, num_samples, batch_size):
+                end = start + batch_size
                 batch_indices = indices[start:end]
 
-                # Get batch data
-                batch_states = flat_states[batch_indices]
-                batch_masks = flat_masks[batch_indices] if flat_masks is not None else None
-                batch_weather = flat_weather[batch_indices]
-                batch_actions = flat_actions[batch_indices]
-                batch_old_log_probs = flat_old_probs[batch_indices]
-                batch_returns = flat_returns[batch_indices]
-                batch_advantages = flat_advantages[batch_indices]
-                batch_continuous_actions = flat_continuous_actions[batch_indices]
-                batch_old_values = flat_old_values[batch_indices]
-
-                # Forward pass with batch data
+                batch_states = states[batch_indices]
+                batch_masks = masks[batch_indices]
+                batch_weather = weather[batch_indices]
+                batch_actions = actions[batch_indices]
+                batch_old_log_probs = old_log_probs[batch_indices]
+                batch_returns = returns[batch_indices]
+                batch_advantages = advantages[batch_indices]
+                # Get current logits and values from the network
                 actor_logits, values = self.network(batch_states, tabular=batch_weather, mask=batch_masks)
-                dist = Categorical(logits=actor_logits)
-                new_log_probs = dist.log_prob(batch_actions).sum(dim=1)  # Sum log probs
+                dist_softmax = F.softmax(actor_logits, dim=1)
+                dist = Categorical(probs=dist_softmax)
+
+                new_log_probs = []
+                for i in range(batch_states.size(0)):
+                    state_actions = batch_actions[i]
+                    state_probs = dist_softmax[i:i+1]
+                    state_dist = Categorical(probs=state_probs)
+                    state_log_probs = state_dist.log_prob(state_actions).sum()
+                    new_log_probs.append(state_log_probs)
+                new_log_probs = torch.stack(new_log_probs)
                 entropy = dist.entropy().mean()
                 ratio = torch.exp(new_log_probs - batch_old_log_probs)
                 surr1 = ratio * batch_advantages
                 surr2 = torch.clamp(ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon) * batch_advantages
                 policy_loss = -torch.min(surr1, surr2).mean()
+
                 value_loss = F.mse_loss(values.squeeze(-1), batch_returns)
                 loss = policy_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy
 
-                # Optimize
                 self.optimizer.zero_grad()
                 scaler.scale(loss).backward()
-                torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
+                torch.cuda.synchronize()
                 scaler.step(self.optimizer)
+                torch.cuda.synchronize()
                 scaler.update()
 
-                # Store metrics (for logging or analysis)
                 policy_losses.append(policy_loss.item())
                 value_losses.append(value_loss.item())
                 entropies.append(entropy.item())
                 losses.append(loss.item())
             if self.scheduler is not None:
-                self.scheduler.step()
+                    self.scheduler.step()
         avg_loss = np.mean(losses)
         avg_policy_loss = np.mean(policy_losses)
         avg_value_loss = np.mean(value_losses)
