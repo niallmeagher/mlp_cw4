@@ -347,7 +347,7 @@ class PPOAgent:
         
         probs = F.softmax(actor_logits, dim=1)
         num_samples = 20
-        '''
+        
         topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
         topk_indices = topk_indices.squeeze(0)
         
@@ -382,7 +382,7 @@ class PPOAgent:
         total_log_prob = log_probs.sum(dim=1)  # (B,)
 
         return selected_actions, total_log_prob, value, actor_logits
-        
+         '''
         
 
     def reward_function(self, state, action):
@@ -447,6 +447,7 @@ class PPOAgent:
         value_losses = []
         entropies = []
         losses = []
+        '''
         for _ in range(self.update_epochs):
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
             probs = F.softmax(actor_logits, dim=1)
@@ -473,7 +474,7 @@ class PPOAgent:
         # Entropy calculation (original policy)
             dist = Categorical(probs=probs)
             entropy = dist.entropy().mean()
-            '''
+        '''
         for _ in range(self.update_epochs):
         # Get current logits and values from the network
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
@@ -494,7 +495,7 @@ class PPOAgent:
             new_log_probs = torch.stack(new_log_probs)
         
             entropy = dist.entropy().mean()
-            '''
+            
             #For old entropy
            # entropy = dist.entropy().mean()
             ratio = torch.exp(new_log_probs - old_log_probs)
