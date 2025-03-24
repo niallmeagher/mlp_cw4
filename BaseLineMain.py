@@ -277,7 +277,7 @@ def main(args, start_epoch=0, checkpoint_path=None):
     #demonstrations = agent.generate_demonstrations(tensor_input, 100)
     #print("Demonstrations collected")
     #agent.preTraining(demonstrations)
-
+    fullresults = []
 
     for epoch in range(start_epoch, num_epochs):
         total_reward = 0.0
@@ -323,7 +323,9 @@ def main(args, start_epoch=0, checkpoint_path=None):
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Elapsed time: {elapsed_time:.4f} seconds")
+        fullresults.append([epoch + 1, avg_reward, avg_BCells, loss, elapsed_time])
 
+    save_results_to_csv(results, output_dir, filename="final_results.csv")
     # Save the final model
     output_dir
     final_path = "final_model.pt"
