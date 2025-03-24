@@ -347,13 +347,41 @@ class PPOAgent:
         
         probs = F.softmax(actor_logits, dim=1)
         num_samples = 20
+        '''
         topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
         topk_indices = topk_indices.squeeze(0)
+        
         dist = Categorical(probs=probs)
         log_prob = dist.log_prob(topk_indices).sum()
      
-        #return topk_indices, log_prob, value, continuous_action
         return topk_indices, log_prob, value, actor_logits
+        '''
+        batch_size = probs.size(0)
+        log_probs = torch.zeros(batch_size, num_samples, device=self.device)
+        remaining_probs = probs.clone()
+        selected_actions = torch.zeros((batch_size, num_samples), 
+                                  dtype=torch.long, device=self.device)
+
+    # Sample without replacement and accumulate log probabilities
+        for i in range(num_samples):
+        # Sample action
+            action = torch.multinomial(remaining_probs, num_samples=1).squeeze(-1)
+            selected_actions[:, i] = action
+
+        # Get log probability for the selected action
+            log_p = torch.log(remaining_probs[torch.arange(batch_size), action] + 1e-10)
+            log_probs[:, i] = log_p
+
+        # Mask the selected action for future steps
+            remaining_probs[torch.arange(batch_size), action] = 0
+        # Renormalize with numerical stability
+            remaining_sum = remaining_probs.sum(dim=1, keepdim=True).clamp(min=1e-10)
+            remaining_probs = remaining_probs / remaining_sum
+
+    # Sum log probabilities across all sampled actions
+        total_log_prob = log_probs.sum(dim=1)  # (B,)
+
+        return selected_actions, total_log_prob, value, actor_logits
         
         
 
@@ -419,7 +447,33 @@ class PPOAgent:
         value_losses = []
         entropies = []
         losses = []
+        for _ in range(self.update_epochs):
+            actor_logits, values = self.network(states, tabular=weather, mask=masks)
+            probs = F.softmax(actor_logits, dim=1)
+        
+        # Reconstruct sampling process during update
+            batch_size = probs.size(0)
+            num_samples = actions.size(1)
+            new_log_probs = torch.zeros(batch_size, device=self.device)
+        
+            remaining_probs = probs.clone()
+            for i in range(num_samples):
+            # Get current actions
+                current_actions = actions[:, i]
+            
+            # Calculate log probs
+                current_log_probs = torch.log(remaining_probs.gather(1, current_actions.unsqueeze(1)) + 1e-10).squeeze()
+                new_log_probs += current_log_probs
+            
+            # Mask and renormalize
+                remaining_probs.scatter_(1, current_actions.unsqueeze(1), 0)
+                remaining_sum = remaining_probs.sum(dim=1, keepdim=True).clamp(min=1e-10)
+                remaining_probs = remaining_probs / remaining_sum
 
+        # Entropy calculation (original policy)
+            dist = Categorical(probs=probs)
+            entropy = dist.entropy().mean()
+            '''
         for _ in range(self.update_epochs):
         # Get current logits and values from the network
             actor_logits, values = self.network(states, tabular=weather, mask=masks)
@@ -440,7 +494,7 @@ class PPOAgent:
             new_log_probs = torch.stack(new_log_probs)
         
             entropy = dist.entropy().mean()
-            
+            '''
             #For old entropy
            # entropy = dist.entropy().mean()
             ratio = torch.exp(new_log_probs - old_log_probs)
