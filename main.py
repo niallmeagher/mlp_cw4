@@ -184,6 +184,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     
     
     try:
+        tabular_tensor=None
         action_indices, log_prob, value, continuous_action = agent.select_action(state, tabular_tensor, mask)
         true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_work_dir, output_folder = temp_output_dir, output_folder_base = temp_output_base_dir)
         
