@@ -99,6 +99,10 @@ class PPOAgent:
         else:
             self.reward_net = None
 
+        print(f'{self.stochastic = }')
+        print(f'{self.normalise_rewards = }')
+        print(f'{self.single_sim = }')
+
     def read_asc_file(self, filename):
         with open(filename, 'r') as f:
             header = [next(f) for _ in range(6)]
@@ -287,8 +291,10 @@ class PPOAgent:
             prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
             if normalise_rewards:
                 difference = (total_ones_base - total_ones_FB) / total_ones_base
+                print('Normalised')
             else:
                 difference = total_ones_base - total_ones_FB
+                print('Not Normalised')
             if total_FB == 0:
                 continue
 
