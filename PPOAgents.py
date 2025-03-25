@@ -55,8 +55,8 @@ class RewardFunction(nn.Module):
 
 class PPOAgent:
     
-    def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=1e-3, clip_epsilon=0.3,
-                 value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type='cosine',T_max=1000,eta_min=1e-5):
+    def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=1e-3, clip_epsilon=0.2,
+                 value_loss_coef=0.4, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type='cosine',T_max=500,eta_min=1e-5):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -326,6 +326,7 @@ class PPOAgent:
         cols = (action_indices % W).cpu().numpy()
 
         #reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
+        print(rows,cols)
         grid[rows, cols] = 101
         self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
         reward = self.run_random_cell2fire_and_analyze(action_indices,
