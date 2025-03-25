@@ -213,7 +213,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         'value': value.detach(),
         'reward': torch.tensor([true_reward], dtype=torch.float32),
         'done': done,
-        'weather': tabular_tensor.detach(),
+        # 'weather': tabular_tensor.detach(),
         'mask': mask.detach(),
         'true_reward': torch.tensor([true_reward], dtype=torch.float32),
         'continuous_action': continuous_action.detach()
@@ -293,7 +293,7 @@ def main(args):
             'dones': [],
             'masks': [],
             'true_rewards': [],
-            'weather': [],
+            # 'weather': [],
             'continuous_action': []
         }
         epoch_rewards = []
@@ -333,7 +333,7 @@ def main(args):
             trajectories['values'].append(res['value'])
             trajectories['rewards'].append(res['reward'])
             trajectories['dones'].append(res['done'])
-            trajectories['weather'].append(res['weather'])
+            # trajectories['weather'].append(res['weather'])
             trajectories['masks'].append(res['mask'])
             trajectories['continuous_action'].append(res['continuous_action'])
             trajectories['true_rewards'].append(res['true_reward'])
@@ -348,7 +348,7 @@ def main(args):
         trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
         trajectories['continuous_action'] = torch.cat(trajectories['continuous_action'], dim=0)
-        trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
+        # trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
 
 

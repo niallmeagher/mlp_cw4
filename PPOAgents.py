@@ -407,7 +407,7 @@ class PPOAgent:
     def update(self, trajectories):
         states = trajectories['states'].to(self.device)
         masks = trajectories['masks'].to(self.device)
-        weather = trajectories['weather'].to(self.device)
+        # weather = trajectories['weather'].to(self.device)
         actions = trajectories['actions'].to(self.device)
         continuous_actions = trajectories['continuous_action'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
@@ -416,7 +416,7 @@ class PPOAgent:
         old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
 
         with torch.no_grad():
-            next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
+            next_value = self.network(states[-1:], mask=masks[-1:])[1].detach().squeeze()
 
         advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
        # print("RETURNS:", returns)
@@ -433,7 +433,7 @@ class PPOAgent:
 
         for _ in range(self.update_epochs):
         # Get current logits and values from the network
-            actor_logits, values = self.network(states, tabular=weather, mask=masks)
+            actor_logits, values = self.network(states, mask=masks)
             dist_softmax = F.softmax(actor_logits,dim=1)
             dist = Categorical(probs = dist_softmax)
             '''
