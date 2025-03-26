@@ -56,8 +56,7 @@ class RewardFunction(nn.Module):
 class PPOAgent:
     
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=1e-3, clip_epsilon=0.2,
-                 value_loss_coef=0.4, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type='cosine',T_max=500,eta_min=1e-5):
-
+                 value_loss_coef=0.4, entropy_coef=0.004, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type='cosine',T_max=500,eta_min=1e-5):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
