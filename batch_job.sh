@@ -11,7 +11,6 @@
 # run_experiment -b slurm_arrayjob.sh -e experiments.txt -m 12
 # ```
 
-
 # ====================
 # Options for sbatch
 # ====================
@@ -24,10 +23,8 @@
 
 # Maximum number of nodes to use for the job
 # #SBATCH --nodes=1
-
 # Generic resources to use - typically you'll want gpu:n to get n gpus
 #SBATCH --gres=gpu:1
-
 # Megabytes of RAM required. Check `cluster-status` for node configurations
 #SBATCH --mem=14000
 
@@ -149,12 +146,10 @@ echo "Moving output data back to DFS"
 
 
 Output=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20_Test/Checkpoints
-results=${SCRATCH_HOME}/Cell2Fire/results/episode_results.csv
-results2=${SCRATCH_HOME}/Cell2Fire/results/Epoch_Stats.csv
+results2=/disk/scratch/s2686742/Cell2Fire/results/
 src_path=${Output}
-dest_path=${data_path}/mlp_cw4/results/$4
+dest_path=/home/s2686742/mlp_cw4/results/$4
 rsync  --archive --update --compress --progress ${src_path}/ ${dest_path}
-rsync  --archive --update --compress --progress ${results}/ ${dest_path}
 rsync  --archive --update --compress --progress ${results2}/ ${dest_path}
 
 # Delete folders from scratch space

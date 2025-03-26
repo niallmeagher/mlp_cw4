@@ -56,7 +56,7 @@ class RewardFunction(nn.Module):
 class PPOAgent:
     
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=1e-3, clip_epsilon=0.2,
-                 value_loss_coef=0.4, entropy_coef=0.004, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type='cosine',T_max=500,eta_min=1e-5):
+                 value_loss_coef=0.4, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type='cosine',T_max=500,eta_min=1e-5):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
@@ -78,7 +78,7 @@ class PPOAgent:
         self.network.to(self.device)
 
         # Add a GAE lambda hyperparameter (commonly around 0.95)
-        self.gae_lambda = 0.98
+        self.gae_lambda = 0.95
 
         self.scheduler = None
         if scheduler_type == "cosine":
@@ -288,8 +288,8 @@ class PPOAgent:
             total_FB = total_ones_FB + total_zeros_FB
             prop_ones_FB = total_ones_FB/total_FB
             prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
-#            difference = (total_ones_base - total_ones_FB)/total_ones_base
-            difference = (total_ones_base - total_ones_FB)/1
+            difference = (total_ones_base - total_ones_FB)/total_ones_base
+#            difference = (total_ones_base - total_ones_FB)/1
 
             if total_FB == 0:
                 continue
