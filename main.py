@@ -242,6 +242,8 @@ def main(args):
     input_folder_final=f'{input_dir}/'
     output_folder=f'{output_dir}'
     output_folder_base=f'{output_dir}_base/'
+    if not os.path.exists(output_folder_base):
+        os.makedirs(output_folder_base)
 
     # params = load_best_hyperparams()
     # agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
