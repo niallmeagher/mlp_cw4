@@ -252,9 +252,18 @@ class PPOAgent:
                 subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 with TPE(max_workers=mp.cpu_count()) as executor:
-                    future1 = executor.submit(run_command, cmd)           
-                    future2 = executor.submit(run_command, cmd_base)          
-                    concurrent.futures.wait([future1, future2])
+                    futures = {
+                        executor.submit(run_command, cmd): "cmd",
+                        executor.submit(run_command, cmd_base): "cmd_base"
+                    }
+                    
+                    for future in concurrent.futures.as_completed(futures):
+                        try:
+                            future.result()
+                        except Exception as e:
+                            print(f"Error in {futures[future]} command")
+                            print(f"Exception: {e}")
+                            raise
 
         except subprocess.CalledProcessError as e:
             print("Exception raised")
