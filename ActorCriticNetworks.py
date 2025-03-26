@@ -64,7 +64,11 @@ class ActorCriticNetwork(nn.Module):
             tab = tab.view(tab.size(0), -1)  # Flatten to (B, 88)
             tab = F.relu(self.tab_fc1(tab))
             tab = F.relu(self.tab_fc2(tab))
-            combined = torch.cat([x, tab], dim=1)
+            try:
+                combined = torch.cat([x, tab], dim=1)
+            except Exception as e:
+                print(f'{x.size(0) = }, {tab.size(0) = }')
+                raise
         else:
             combined = x
         # Actor branch
