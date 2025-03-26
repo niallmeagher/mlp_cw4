@@ -25,7 +25,7 @@
 #SBATCH --nodes=1
 
 # Generic resources to use - typically you'll want gpu:n to get n gpus
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 
 # Megabytes of RAM required. Check `cluster-status` for node configurations
 #SBATCH --mem=14000
@@ -115,6 +115,7 @@ data_path=/home/${USER}
 # send over both mlp_cw4 and Cell2Fire folders
 
 rsync --archive --update --compress --progress --exclude ${data_path}/mlp_cw4/results/ ${data_path}/mlp_cw4 ${SCRATCH_HOME}
+rsync --archive --update --compress --progress ${data_path}/mlp_cw4/results/Sub40x40/checkpoint.pt ${SCRATCH_HOME}
 rsync --archive --update --compress --progress ${data_path}/Cell2Fire ${SCRATCH_HOME}
 
 
@@ -160,7 +161,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}" ${stochastic_flag} ${normalise_flag} ${single_sim_flag}"
+COMMAND="python ${SCRATCH_HOME}/mlp_cw4/main.py -n ${NumEpochs} -e ${NumEpisodes} -i "${InputFileDirectory}" -o "${OutputFileDirectory}" -c "${SCRATCH_HOME}/checkpoint.pt" ${stochastic_flag} ${normalise_flag} ${single_sim_flag}"
 echo "Running provided command: ${COMMAND}"
 eval "${COMMAND}"
 echo "Command ran successfully!"

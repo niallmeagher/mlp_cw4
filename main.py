@@ -264,6 +264,7 @@ def main(args):
     
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
                      input_channels=4, learned_reward=False, num_actions=1600,
+                     value_loss_coef=0.4, gae_lambda=0.94, clip_epsilon=0.2, T_max=5000,
                      stochastic=args['stochastic'], normalise_rewards=args['normalise_rewards'], single_sim=args['single_sim'])
     
     csvf = "episode_results.csv"
