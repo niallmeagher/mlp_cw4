@@ -165,7 +165,7 @@ def read_multi_channel_asc(files, header_lines=6):
         if grid_np.shape != (40, 40):
             raise ValueError(f"Expected grid size of (40, 40), but got {grid_np.shape}")
         tensors.append(torch.tensor(grid_np))
-    return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20, 20)
+    return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 40, 40)
 
 def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
@@ -311,7 +311,7 @@ def main(args):
         # while not os.path.exists(folder_stored):
         #     continue
         # print('Weathers_Stored populated!')
-        print(os.listdir(folder_stored))
+        # print(os.listdir(folder_stored))
         tensor_data = load_random_csv_as_tensor(folder_sample_from, folder_stored, drop_first_n_cols=2, has_header=True)
         tabular_tensor = tensor_data.view(1, 8, 11)
         epoch_rewards = []
