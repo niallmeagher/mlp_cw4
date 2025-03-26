@@ -10,7 +10,7 @@ from torch.distributions import Categorical
 
 
 class ActorCriticNetwork(nn.Module):
-    def __init__(self, input_channels=1, num_actions=400, tabular = False):
+    def __init__(self, input_channels=1, num_actions=40*40, tabular = False):
         super(ActorCriticNetwork, self).__init__()
         # Shared CNN Backbone
         self.tabular = tabular

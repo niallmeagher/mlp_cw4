@@ -56,9 +56,9 @@ class RewardFunction(nn.Module):
 class PPOAgent:    
     def __init__(self, input_folder, new_folder, output_folder, output_folder_base, input_channels=1, num_actions=400, lr=3e-4, clip_epsilon=0.1,
                  value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type="cosine",T_max=1000,eta_min=1e-5,
-                 gae_lambda=0.95, stochastic=False, normalise_rewards=False, single_sim=False):
+                 gae_lambda=0.95, stochastic=False, normalise_rewards=True, single_sim=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.network = ActorCriticNetwork(input_channels, num_actions, tabular=False).to(self.device)
+        self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
         self.clip_epsilon = clip_epsilon
         self.value_loss_coef = value_loss_coef
@@ -357,7 +357,7 @@ class PPOAgent:
         actor_logits, value = self.network(state, tabular=weather, mask=mask)
 
         probs = F.softmax(actor_logits, dim=1)
-        num_samples = 20
+        num_samples = 80
         topk_indices = torch.multinomial(probs, num_samples=num_samples, replacement=False)
         topk_indices = topk_indices.squeeze(0)
         dist = Categorical(probs=probs)
@@ -407,7 +407,7 @@ class PPOAgent:
     def update(self, trajectories):
         states = trajectories['states'].to(self.device)
         masks = trajectories['masks'].to(self.device)
-        # weather = trajectories['weather'].to(self.device)
+        weather = trajectories['weather'].to(self.device)
         actions = trajectories['actions'].to(self.device)
         continuous_actions = trajectories['continuous_action'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()

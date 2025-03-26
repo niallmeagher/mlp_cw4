@@ -146,8 +146,8 @@ def read_asc_to_tensor(file_path, header_lines=6):
         for line in f:
             grid.append(list(map(float, line.split())))
     grid_np = np.array(grid)
-    if grid_np.shape != (20, 20):
-        raise ValueError(f"Expected grid size of (20, 20), but got {grid_np.shape}")
+    if grid_np.shape != (40, 40):
+        raise ValueError(f"Expected grid size of (40, 40), but got {grid_np.shape}")
     tensor = torch.tensor(grid_np).unsqueeze(0).unsqueeze(0)
     return tensor
 
@@ -159,8 +159,8 @@ def read_multi_channel_asc(files, header_lines=6):
                 next(f)
             grid = [list(map(float, line.split())) for line in f]
         grid_np = np.array(grid)
-        if grid_np.shape != (20, 20):
-            raise ValueError(f"Expected grid size of (20, 20), but got {grid_np.shape}")
+        if grid_np.shape != (40, 40):
+            raise ValueError(f"Expected grid size of (40, 40), but got {grid_np.shape}")
         tensors.append(torch.tensor(grid_np))
     return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20, 20)
 
@@ -184,7 +184,6 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     
     
     try:
-        tabular_tensor=None
         action_indices, log_prob, value, continuous_action = agent.select_action(state, tabular_tensor, mask)
         true_reward = agent.simulate_fire_episode(action_indices, work_folder=temp_work_dir, output_folder = temp_output_dir, output_folder_base = temp_output_base_dir)
         
@@ -213,7 +212,7 @@ def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
         'value': value.detach(),
         'reward': torch.tensor([true_reward], dtype=torch.float32),
         'done': done,
-        # 'weather': tabular_tensor.detach(),
+        'weather': tabular_tensor.detach(),
         'mask': mask.detach(),
         'true_reward': torch.tensor([true_reward], dtype=torch.float32),
         'continuous_action': continuous_action.detach()
@@ -259,7 +258,7 @@ def main(args):
     #                  )
     
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
-                     input_channels=4, learned_reward=False,
+                     input_channels=4, learned_reward=False, num_actions=1600,
                      stochastic=args['stochastic'], normalise_rewards=args['normalise_rewards'], single_sim=args['single_sim'])
     
     csvf = "episode_results.csv"
@@ -282,7 +281,7 @@ def main(args):
     ]
     tensor_input = read_multi_channel_asc(files)
     mask = tensor_input[0,0,:,:] != 101
-    mask = mask.view(1,400)
+    mask = mask.view(1,40*40)
     for epoch in range(start_epoch, num_epochs):
         trajectories = {
             'states': [],
@@ -293,7 +292,7 @@ def main(args):
             'dones': [],
             'masks': [],
             'true_rewards': [],
-            # 'weather': [],
+            'weather': [],
             'continuous_action': []
         }
         epoch_rewards = []
@@ -333,7 +332,7 @@ def main(args):
             trajectories['values'].append(res['value'])
             trajectories['rewards'].append(res['reward'])
             trajectories['dones'].append(res['done'])
-            # trajectories['weather'].append(res['weather'])
+            trajectories['weather'].append(res['weather'])
             trajectories['masks'].append(res['mask'])
             trajectories['continuous_action'].append(res['continuous_action'])
             trajectories['true_rewards'].append(res['true_reward'])
@@ -348,7 +347,7 @@ def main(args):
         trajectories['dones'] = torch.tensor(trajectories['dones'], dtype=torch.float32, device=agent.device)
         trajectories['masks'] = torch.cat(trajectories['masks'], dim=0)
         trajectories['continuous_action'] = torch.cat(trajectories['continuous_action'], dim=0)
-        # trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
+        trajectories['weather'] = torch.cat(trajectories['weather'], dim=0)
         trajectories['true_rewards'] = torch.cat(trajectories['true_rewards'], dim=0).squeeze(-1)
 
 
