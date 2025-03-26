@@ -59,6 +59,8 @@ class ActorCriticNetwork(nn.Module):
         if self.tabular == True:
 
             tab = tabular.float()
+            if tab.size(0) != x.size(0):
+                tab = tab.repeat(x.size(0), 1, 1)
             tab = tab.view(tab.size(0), -1)  # Flatten to (B, 88)
             tab = F.relu(self.tab_fc1(tab))
             tab = F.relu(self.tab_fc2(tab))
