@@ -448,7 +448,7 @@ class PPOAgent:
 
         for _ in range(self.update_epochs):
         # Get current logits and values from the network
-            actor_logits, values = self.network(states, mask=masks)
+            actor_logits, values = self.network(states, tabular=weather, mask=masks)
             dist_softmax = F.softmax(actor_logits,dim=1)
             dist = Categorical(probs = dist_softmax)
             '''
