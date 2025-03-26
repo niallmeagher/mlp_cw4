@@ -278,8 +278,8 @@ class PPOAgent:
         
         for i in range(1, num_grids + 1):
             print('Loading csv files...')
-            csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
-            csv_file_FB = os.path.join(firebreak_grids_folder, f"Grids{i}", "ForestGrid08.csv")
+            csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid07.csv")
+            csv_file_FB = os.path.join(firebreak_grids_folder, f"Grids{i}", "ForestGrid07.csv")
             if not os.path.exists(csv_file_base):
                 continue
             print('CSV files loaded')
