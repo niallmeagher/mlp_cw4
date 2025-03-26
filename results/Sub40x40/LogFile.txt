@@ -1,0 +1,57 @@
+------ Command line values ------
+InFolder: ../data/Sub40x40/ 
+OutFolder: ../results/Sub40x40 
+WeatherOpt: rows 
+HarvestPlan:  
+OutMessages: 1 
+Ignitions: 1 
+OutputGrids: 1 
+FinalGrid: 1 
+TotalYears: 1 
+TotalSims: 5 
+NWeatherFiles: 1 
+FirePeriodLength: 1.0 
+IgnitionRadius: 5 
+ROSThreshold: 0.1 
+HFIThreshold: 0.1 
+ROS-CV: 0.0 
+seed: 123 
+Forest DataFrame from instance ../data/Sub40x40/Data.csv
+Number of cells: 1600
+
+Weather DataFrame from instance ../data/Sub40x40/Weather.csv
+
+Selected ignition point for Year 1, sim 1: 1167
+----------------------------- Results -----------------------------
+Total Available Cells:    1132 - % of the Forest: 70.75%
+Total Burnt Cells:        312 - % of the Forest: 19.5%
+Total Non-Burnable Cells: 156 - % of the Forest: 9.75%
+Total Harvested Cells: 0 - % of the Forest: 0%
+
+Selected ignition point for Year 1, sim 2: 1092
+----------------------------- Results -----------------------------
+Total Available Cells:    1000 - % of the Forest: 62.5%
+Total Burnt Cells:        444 - % of the Forest: 27.75%
+Total Non-Burnable Cells: 156 - % of the Forest: 9.75%
+Total Harvested Cells: 0 - % of the Forest: 0%
+
+Selected ignition point for Year 1, sim 3: 1133
+----------------------------- Results -----------------------------
+Total Available Cells:    974 - % of the Forest: 60.875%
+Total Burnt Cells:        470 - % of the Forest: 29.375%
+Total Non-Burnable Cells: 156 - % of the Forest: 9.75%
+Total Harvested Cells: 0 - % of the Forest: 0%
+
+Selected ignition point for Year 1, sim 4: 848
+----------------------------- Results -----------------------------
+Total Available Cells:    1180 - % of the Forest: 73.75%
+Total Burnt Cells:        264 - % of the Forest: 16.5%
+Total Non-Burnable Cells: 156 - % of the Forest: 9.75%
+Total Harvested Cells: 0 - % of the Forest: 0%
+
+Selected ignition point for Year 1, sim 5: 1169
+----------------------------- Results -----------------------------
+Total Available Cells:    898 - % of the Forest: 56.125%
+Total Burnt Cells:        546 - % of the Forest: 34.125%
+Total Non-Burnable Cells: 156 - % of the Forest: 9.75%
+Total Harvested Cells: 0 - % of the Forest: 0%
