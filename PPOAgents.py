@@ -431,7 +431,7 @@ class PPOAgent:
         old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
 
         with torch.no_grad():
-            next_value = self.network(states[-1:], mask=masks[-1:])[1].detach().squeeze()
+            next_value = self.network(states[-1:], tabular=weather, mask=masks[-1:])[1].detach().squeeze()
 
         advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
        # print("RETURNS:", returns)
