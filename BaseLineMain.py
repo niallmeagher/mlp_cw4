@@ -325,13 +325,18 @@ def main(args, start_epoch=0, checkpoint_path=None):
         fullresults.append([epoch + 1, avg_reward, avg_BCells, loss, elapsed_time])
 
     epochs, rewards, averageBurncells, losses, times = zip(*fullresults)
-    resultDict = {
-            "epochs": epochs,
-            "rewards": rewards,
-            "Burned Cells": averageBurncells,
-            "losses": losses,
-            "times": times
-    }
+    resultDict = [
+        {
+            "Epoch": epoch,
+            "Reward": reward,
+            "Burned Cells": burned_cells,
+            "Loss": loss,
+            "Time Elapsed": time_elapsed
+        }
+        for epoch, reward, burned_cells, loss, time_elapsed in zip(epochs, rewards, averageBurncells, losses, times)
+    ]
+
+
     save_results_to_csv(resultDict, '/home/s2750265/mlp_cw4/results', filename="final_results.csv")
     # Save the final model
     output_dir
