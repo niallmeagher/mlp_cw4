@@ -10,7 +10,7 @@ from torch.distributions import Categorical
 
 
 class ActorCriticNetwork(nn.Module):
-    def __init__(self, input_channels=1, num_actions=40*40, tabular = False):
+    def __init__(self, input_channels=1, num_actions=1600, tabular = False):
         super(ActorCriticNetwork, self).__init__()
         # Shared CNN Backbone
         self.tabular = tabular
@@ -21,14 +21,14 @@ class ActorCriticNetwork(nn.Module):
         self.dropout = nn.Dropout(0.3)
         self.conv2 = nn.Conv2d(
             in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=0)
-        combined_feature_size = 16*4*4
+        combined_feature_size = 16*9*9
         if self.tabular == True:
 
             self.tab_fc1 = nn.Linear(8 * 11, 128)
             self.tab_fc2 = nn.Linear(128, 64)
         
         # Combined feature size will be cnn_feature_size + tab_feature_size
-            combined_feature_size = 16 * 4 * 4 + 64
+            combined_feature_size = 16 * 9 * 9 + 64
 
         # Actor branch: expects flattened feature size of 16 * 4 * 4 = 256
         self.actor_fc1 = nn.Linear(combined_feature_size, 512)
