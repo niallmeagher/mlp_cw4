@@ -502,8 +502,7 @@ class PPOAgent:
             torch.nn.utils.clip_grad_norm_(self.network.parameters(), max_norm=0.5)
             scaler.step(self.optimizer)
             scaler.update()
-            if self.scheduler is not None:
-                self.scheduler.step()  # Update LR after each epoch
+
             policy_losses.append(policy_loss.item())
             value_losses.append(value_loss.item())
             entropies.append(entropy.item())
@@ -511,6 +510,8 @@ class PPOAgent:
 
         
             print("LOSS", policy_loss.item(), self.value_loss_coef, value_loss.item(), self.entropy_coef, entropy.item())
+        if self.scheduler is not None:
+            self.scheduler.step()  # Update LR after each epoch
         avg_loss = np.mean(losses)
         avg_policy_loss = np.mean(policy_losses)
         avg_value_loss = np.mean(value_losses)
