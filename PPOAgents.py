@@ -251,6 +251,7 @@ class PPOAgent:
                 subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 subprocess.run(cmd_base, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
+                print('Running Cell2Fire sims...')
                 with TPE(max_workers=mp.cpu_count()) as executor:
                     futures = {
                         executor.submit(run_command, cmd): "cmd",
@@ -264,6 +265,7 @@ class PPOAgent:
                             print(f"Error in {futures[future]} command")
                             print(f"Exception: {e}")
                             raise
+                print('Cell2Fire sims run successfully!')
 
         except subprocess.CalledProcessError as e:
             print("Exception raised")
@@ -275,13 +277,16 @@ class PPOAgent:
         computed_values = []
         
         for i in range(1, num_grids + 1):
+            print('Loading csv files...')
             csv_file_base = os.path.join(base_grids_folder, f"Grids{i}", "ForestGrid08.csv")
             csv_file_FB = os.path.join(firebreak_grids_folder, f"Grids{i}", "ForestGrid08.csv")
             if not os.path.exists(csv_file_base):
                 continue
+            print('CSV files loaded')
             try:
                 data_base = np.loadtxt(csv_file_base, delimiter=',')
                 data_FB = np.loadtxt(csv_file_FB, delimiter=',')
+                print('data extracted from csv files')
             except Exception as e:
                 continue
 
@@ -305,6 +310,7 @@ class PPOAgent:
                 difference = total_ones_base - total_ones_FB
                 print('Not Normalised')
             if total_FB == 0:
+                print('total FB was 0??')
                 continue
 
             prop_ones_base = total_ones_base / total_base
