@@ -149,8 +149,8 @@ echo "Moving output data back to DFS"
 
 
 Output=${SCRATCH_HOME}/Cell2Fire/data/Sub20x20_Test/Checkpoints
-results = ${SCRATCH_HOME}/Cell2Fire/results/episode_results.csv
-results2 = ${SCRATCH_HOME}/Cell2Fire/results/Epoch_Stats.csv
+results=${SCRATCH_HOME}/Cell2Fire/results/episode_results.csv
+results2=${SCRATCH_HOME}/Cell2Fire/results/Epoch_Stats.csv
 src_path=${Output}
 dest_path=${data_path}/mlp_cw4/results/$4
 rsync  --archive --update --compress --progress ${src_path}/ ${dest_path}
