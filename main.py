@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor as TPE
 from concurrent.futures import ProcessPoolExecutor as PPE
 import multiprocessing as mp
 import optuna
+from scipy.ndimage import zoom
 
 import subprocess
 from PPOAgents import PPOAgent, RewardFunction  # Make sure your PPOAgent is defined and importable
@@ -159,6 +160,8 @@ def read_multi_channel_asc(files, header_lines=6):
                 next(f)
             grid = [list(map(float, line.split())) for line in f]
         grid_np = np.array(grid)
+        if grid_np.shape == (20,20):
+            grid_np = zoom(grid_np, zoom=(2,2), order=1)
         if grid_np.shape != (40, 40):
             raise ValueError(f"Expected grid size of (40, 40), but got {grid_np.shape}")
         tensors.append(torch.tensor(grid_np))
