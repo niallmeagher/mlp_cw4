@@ -23,7 +23,6 @@ username = os.getenv('USER')
 HOME_DIR = os.path.join('/disk/scratch', username,'Cell2Fire', 'data') +'/'
 HOME_DIR2 = os.path.join('/disk/scratch', username,'Cell2Fire', 'results') +'/'
 
-
 def save_results_to_csv(results, output_dir, filename="experiment_results.csv"):
     """
     Save experiment results to a CSV file.
@@ -40,7 +39,7 @@ def save_results_to_csv(results, output_dir, filename="experiment_results.csv"):
     csv_file_path = os.path.join(output_dir, filename)
 
     # Define the CSV fieldnames (column headers)
-    fieldnames = results[0].keys() if results else []
+    fieldnames = ["Epoch", "Reward", "Burned Cells", "Loss", 'Time Elapsed']
 
     # Write results to the CSV file
     with open(csv_file_path, mode="w", newline="") as csv_file:
@@ -325,7 +324,15 @@ def main(args, start_epoch=0, checkpoint_path=None):
         print(f"Elapsed time: {elapsed_time:.4f} seconds")
         fullresults.append([epoch + 1, avg_reward, avg_BCells, loss, elapsed_time])
 
-    save_results_to_csv(results, output_dir, filename="final_results.csv")
+    epochs, rewards, averageBurncells, losses, times = zip(*fullresults)
+    resultDict = {
+            "epochs": epochs,
+            "rewards": rewards,
+            "Burned Cells": averageBurncells,
+            "losses": losses,
+            "times": times
+    }
+    save_results_to_csv(resultDict, '/home/s2750265/mlp_cw4/results', filename="final_results.csv")
     # Save the final model
     output_dir
     final_path = "final_model.pt"
