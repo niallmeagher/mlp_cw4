@@ -602,14 +602,14 @@ class PPOAgent:
             penalty_value = -0
             rows, cols = data_FB.shape
             
-            difference = 0
-            penalty = -0.1
-            for index in topk_indices:
-               r, c = index // cols, index % cols
-               neighbors = data_FB[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
-               if np.all(neighbors == 0):  
-                   penalty += penalty_value
-            difference += penalty
+            difference = -1.0*total_ones_FB
+            # penalty = -0.1
+            # for index in topk_indices:
+            #    r, c = index // cols, index % cols
+            #    neighbors = data_FB[max(0, r - 1): min(rows, r + 2), max(0, c - 1): min(cols, c + 2)]
+            #    if np.all(neighbors == 0):  
+            #        penalty += penalty_value
+            # difference += penalty
             
             computed_values.append(difference)
             print("DifferenceValue:", difference)
