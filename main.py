@@ -125,12 +125,10 @@ def read_multi_channel_asc(files, header_lines=6):
                 next(f)
             grid = [list(map(float, line.split())) for line in f]
         grid_np = np.array(grid)
-        if grid_np.shape == (20,20):
-            grid_np = zoom(grid_np, zoom=(2,2), order=1)
-        if grid_np.shape != (40, 40):
-            raise ValueError(f"Expected grid size of (40, 40), but got {grid_np.shape}")
+        if grid_np.shape != (20,20):
+            raise ValueError(f"Expected grid size of (20,20), but got {grid_np.shape}")
         tensors.append(torch.tensor(grid_np))
-    return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 40, 40)
+    return torch.stack(tensors).unsqueeze(0)  # Shape (1, 4, 20,20)
 
 def simulate_single_episode(agent, state, tabular_tensor, mask, input_folder):
     # Create a temporary working directory for this episode
@@ -227,8 +225,7 @@ def main(args):
     #                  )
     
     agent = PPOAgent(input_folder_final, new_folder, output_folder,output_folder_base,
-                     input_channels=4, learned_reward=False, num_actions=1600,
-                     value_loss_coef=0.4, gae_lambda=0.94, clip_epsilon=0.2, T_max=5000, entropy_coef=0.001,
+                     input_channels=4, learned_reward=False, num_actions=400,
                      stochastic=args['stochastic'], normalise_rewards=args['normalise_rewards'], single_sim=args['single_sim'])
     
     csvf = "episode_results.csv"
@@ -251,7 +248,7 @@ def main(args):
     ]
     tensor_input = read_multi_channel_asc(files)
     mask = tensor_input[0,0,:,:] != 101
-    mask = mask.view(1,40*40)
+    mask = mask.view(1,400)
     for epoch in range(start_epoch, num_epochs):
         trajectories = {
             'states': [],
