@@ -553,7 +553,7 @@ class DQNAgent:
         grid[rows, cols] = 101
         self.write_asc_file(os.path.join(work_folder, "Forest.asc"), header, grid)
         
-        if(False):
+        if(True):
             total_burned_cells = 0
             for _ in range(num_simulations):
                 burned_cells = self.run_Cell2FireOnce_ReturnBurnMap(work_folder)
@@ -603,7 +603,130 @@ class DQNAgent:
             true_reward = 1 - (abs(action - TARGET_ACTION) / TARGET_ACTION)
             true_reward = max(0.0, true_reward)
             return torch.tensor(true_reward, dtype=torch.float32, device=self.device)
+    '''
+    def preTraining(self, demonstrations, num_epochs=100, margin=0.1, l2_weight=0.01):
+        optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=1e-3)  # Increased LR
+        best_loss = float('inf')
     
+        for epoch in range(num_epochs):
+            epoch_loss = 0.0
+            for state, action in demonstrations:
+                state = torch.tensor(state, dtype=torch.float32).to(self.device)
+                action = torch.tensor(action, dtype=torch.long).to(self.device)
+            
+                # Forward pass
+                q_values = self.policy_net(state)
+            
+                # 1. DQN loss - compare to target network
+                with torch.no_grad():
+                    target_q = self.target_net(state).max(1)[0]  # Max Q as target
+                current_q = q_values.gather(1, action.unsqueeze(1)).squeeze()
+                dqn_loss = F.mse_loss(current_q, target_q)
+            
+                # 2. Margin loss (reduced weight)
+                demo_q = q_values.gather(1, action.unsqueeze(1))
+                other_q = q_values.clone().scatter_(1, action.unsqueeze(1), -float('inf'))
+                max_other_q = other_q.max(1)[0].unsqueeze(1)
+                margin_loss = F.relu(max_other_q - demo_q + margin).mean() * 0.1  # Reduced impact
+            
+                # 3. L2 regularization
+                l2_loss = sum(p.pow(2).sum() for p in self.policy_net.parameters())
+            
+                # Combined loss
+                loss = dqn_loss + margin_loss + l2_weight * l2_loss
+            
+                # Backward pass
+                optimizer.zero_grad()
+                loss.backward()
+            
+                # Gradient clipping
+                torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), 1.0)
+            
+                optimizer.step()
+                epoch_loss += loss.item()
+        
+            # Update target network
+            if epoch % 10 == 0:
+                self.target_net.load_state_dict(self.policy_net.state_dict())
+        
+            avg_loss = epoch_loss / len(demonstrations)
+        
+            # Early stopping if no improvement
+            if avg_loss < best_loss:
+                best_loss = avg_loss
+                patience = 0
+            else:
+                patience += 1
+                if patience > 20:  # Stop if no improvement for 20 epochs
+                    print(f"Early stopping at epoch {epoch}")
+                    break
+        
+            print(f"Epoch {epoch}: Loss={avg_loss:.4f}, Best={best_loss:.4f}")
+    '''
+    '''
+    def preTraining(self, demonstrations, num_epochs=100, margin=0.1, l2_weight=0.01, batch_size=64):
+        optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=5e-4)
+        best_loss = float('inf')
+
+        # Convert demonstrations to proper format
+        states = torch.stack([torch.tensor(s, dtype=torch.float32) for s, a in demonstrations])
+        actions = torch.stack([torch.tensor(a, dtype=torch.long) for s, a in demonstrations])
+
+        for epoch in range(num_epochs):
+            epoch_loss = 0.0
+
+            # Forward pass (process all demonstrations at once)
+            q_values = self.policy_net(states.to(self.device))  # Shape: [num_demos, num_actions]
+
+            # 1. DQN loss
+            current_q = q_values.gather(1, actions.unsqueeze(1).to(self.device))  # Shape: [num_demos, 1]
+
+            # Use target network for stability
+            with torch.no_grad():
+                target_q = self.target_net(states.to(self.device)).max(1)[0].unsqueeze(1)  # Shape: [num_demos, 1]
+    
+            dqn_loss = F.mse_loss(current_q, target_q)
+    
+            # 2. Margin loss
+            demo_q = q_values.gather(1, actions.unsqueeze(1).to(self.device))
+            other_q = q_values.clone().scatter_(1, actions.unsqueeze(1).to(self.device), -float('inf'))
+            max_other_q = other_q.max(1)[0].unsqueeze(1)
+            margin_loss = F.relu(max_other_q - demo_q + margin).mean()
+
+            # 3. L2 regularization
+            l2_loss = sum(p.pow(2).sum() for p in self.policy_net.parameters())
+
+            # Combined loss
+            loss = dqn_loss + margin_loss + l2_weight * l2_loss
+
+            # Backward pass
+            optimizer.zero_grad()
+            loss.backward()
+
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), 1.0)
+
+            optimizer.step()
+            epoch_loss += loss.item()
+
+            # Update target network periodically
+            if epoch % 10 == 0:
+                self.target_net.load_state_dict(self.policy_net.state_dict())
+
+            avg_loss = epoch_loss  # Since we process all demos at once
+    
+            # Early stopping if no improvement
+            if avg_loss < best_loss:
+                best_loss = avg_loss
+                patience = 0
+            else:
+                patience += 1
+                if patience > 20:
+                    print(f"Early stopping at epoch {epoch}")
+                    break
+    
+            print(f"Epoch {epoch}: Loss={avg_loss:.4f}, Best={best_loss:.4f}")
+    '''
     def preTraining(self, demonstrations, num_epochs=100, margin = 0.1, l2_weight = 0.01):
         optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=self.optimizer.param_groups[0]['lr'])
         for epoch in range(num_epochs):
