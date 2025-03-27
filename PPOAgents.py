@@ -58,7 +58,7 @@ class PPOAgent:
                  value_loss_coef=0.5, entropy_coef=0.005, gamma=0.99, update_epochs=5, learned_reward=False,scheduler_type="cosine",T_max=1000,eta_min=1e-5,
                  gae_lambda=0.95, stochastic=False, normalise_rewards=False, single_sim=False):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.network = ActorCriticNetwork(input_channels, num_actions, tabular=False).to(self.device)
+        self.network = ActorCriticNetwork(input_channels, num_actions, tabular=True).to(self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
         self.clip_epsilon = clip_epsilon
         self.value_loss_coef = value_loss_coef
@@ -407,7 +407,7 @@ class PPOAgent:
     def update(self, trajectories):
         states = trajectories['states'].to(self.device)
         masks = trajectories['masks'].to(self.device)
-        # weather = trajectories['weather'].to(self.device)
+        weather = trajectories['weather'].to(self.device)
         actions = trajectories['actions'].to(self.device)
         continuous_actions = trajectories['continuous_action'].to(self.device)
         old_log_probs = trajectories['log_probs'].to(self.device).detach()
@@ -416,7 +416,7 @@ class PPOAgent:
         old_values = trajectories['values'].to(self.device).squeeze(-1).detach()
 
         with torch.no_grad():
-            next_value = self.network(states[-1:], mask=masks[-1:])[1].detach().squeeze()
+            next_value = self.network(states[-1:], tabular=weather[-1:], mask=masks[-1:])[1].detach().squeeze()
 
         advantages, returns = self.compute_gae(rewards, dones, old_values, next_value)
        # print("RETURNS:", returns)
@@ -433,7 +433,7 @@ class PPOAgent:
 
         for _ in range(self.update_epochs):
         # Get current logits and values from the network
-            actor_logits, values = self.network(states, mask=masks)
+            actor_logits, values = self.network(states, tabular=weather, mask=masks)
             dist_softmax = F.softmax(actor_logits,dim=1)
             dist = Categorical(probs = dist_softmax)
             '''
