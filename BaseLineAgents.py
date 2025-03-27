@@ -64,7 +64,7 @@ class DQNAgent:
         self.update_epochs = update_epochs
         self.learned_reward = learned_reward
 
-        self.k = -1
+        self.k = -2
 
         self.epsilon = 1.0  # Initial exploration rate
         self.epsilon_min = 0.01  # Minimum exploration rate
@@ -508,6 +508,7 @@ class DQNAgent:
             total_FB = total_ones_FB + total_zeros_FB
             prop_ones_FB = total_ones_FB/total_FB
             prop_FB = (1/(prop_ones_FB+ 1e-8)) -1
+            #difference = (total_ones_base - total_ones_FB)/total_ones_base
             difference = total_ones_base - total_ones_FB
             if total_FB == 0:
                 continue

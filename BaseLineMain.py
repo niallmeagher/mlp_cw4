@@ -273,9 +273,9 @@ def main(args, start_epoch=0, checkpoint_path=None):
     mask = tensor_input[0,0,:,:] != 101
     mask = mask.view(1,400)
 
-    #demonstrations = agent.generate_demonstrations(tensor_input, 100)
+    #demonstrations = agent.generate_demonstrations(tensor_input, 500)
     #print("Demonstrations collected")
-    #agent.preTraining(demonstrations)
+    #agent.preTraining(demonstrations, num_epochs=500)
     fullresults = []
 
     for epoch in range(start_epoch, num_epochs):
