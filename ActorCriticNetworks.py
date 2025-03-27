@@ -4,10 +4,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 
-# -----------------------------
-# 1. Define the Actor-Critic Network
-# -----------------------------
-
 
 class ActorCriticNetwork(nn.Module):
     def __init__(self, input_channels=1, num_actions=400, tabular = False):
@@ -55,11 +51,11 @@ class ActorCriticNetwork(nn.Module):
         x = F.relu(x)
         x = self.pool(x)
         x = self.dropout(x)
-        x = x.view(x.size(0), -1)  # Now x should have shape (B, 256)
+        x = x.view(x.size(0), -1)  
         if self.tabular == True:
 
             tab = tabular.float()
-            tab = tab.view(tab.size(0), -1)  # Flatten to (B, 88)
+            tab = tab.view(tab.size(0), -1) 
             tab = F.relu(self.tab_fc1(tab))
             tab = F.relu(self.tab_fc2(tab))
             combined = torch.cat([x, tab], dim=1)
@@ -69,11 +65,11 @@ class ActorCriticNetwork(nn.Module):
         actor_hidden = F.relu(self.actor_fc1(combined))
         actor_hidden = self.bn1(actor_hidden)
         actor_hidden = F.relu(self.actor_fc2(actor_hidden))
-        actor_logits = self.actor_out(actor_hidden)  # (B, num_actions)
+        actor_logits = self.actor_out(actor_hidden)  
         actor_logits = actor_logits
         if mask is not None:
             actor_logits = actor_logits.masked_fill(mask == 0, -1e10)
-        #dist = Categorical(logits=actor_logits)
+        
 
         # Critic branch
         critic_hidden = F.relu(self.critic_fc1(combined))
