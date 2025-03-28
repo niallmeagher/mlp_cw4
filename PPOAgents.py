@@ -326,8 +326,10 @@ class PPOAgent:
         header, grid = self.read_asc_file(os.path.join(work_folder, "Forest.asc"))
       
         H, W = grid.shape  # Assuming 20x20 grid
-        rows = (action_indices // W).cpu().numpy()
-        cols = (action_indices % W).cpu().numpy()
+        if action_indices.is_cuda:
+            action_indices = action_indices.cpu()
+        rows = (action_indices // W).numpy()
+        cols = (action_indices % W).numpy()
 
         #reward = self.run_random_cell2fire_and_analyze(action_indices.cpu().numpy())
         grid[rows, cols] = 101
